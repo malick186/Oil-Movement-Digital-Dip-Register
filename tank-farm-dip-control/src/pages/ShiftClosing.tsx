@@ -55,60 +55,59 @@ export default function ShiftClosing() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <span className="text-sm text-slate-400">Loading...</span>
+      <div className="loading-state">
+        <div className="loading-spinner" />
+        <span>Loading...</span>
       </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-base font-semibold text-slate-700 mb-4">Shift Closing</h2>
+      <h2 className="text-xl font-bold text-dragon-text mb-4">Shift Closing</h2>
 
       {msg && (
-        <div className={`text-xs px-3 py-2 rounded mb-3 ${
-          msg.includes('successfully') ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
-        }`}>
+        <div className={`notice-banner mb-3 ${msg.includes('successfully') ? 'success' : 'error'}`}>
           {msg}
         </div>
       )}
 
       {shiftStatuses.length === 0 ? (
-        <div className="text-xs text-slate-400">No active shifts configured</div>
+        <div className="text-xs text-dragon-text-muted">No active shifts configured</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           {shiftStatuses.map((status) => (
-            <div key={status.shift_id} className="bg-white rounded border border-slate-200 p-4">
+            <div key={status.shift_id} className="glass-card p-4">
               <div className="flex items-center gap-3 mb-3">
-                <CalendarCheck size={24} className={status.is_closed ? 'text-slate-400' : 'text-green-500'} />
+                <CalendarCheck size={24} className={status.is_closed ? 'text-dragon-text-muted' : 'text-dragon-success'} />
                 <div>
-                  <div className="text-sm font-medium text-slate-700">{status.shift_name}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-sm font-medium text-dragon-text">{status.shift_name}</div>
+                  <div className="text-xs text-dragon-text-secondary">
                     Status: {status.is_closed ? 'Closed' : 'Open'}
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                <div className="text-slate-500">Total Dips: <span className="font-mono text-slate-700">{status.total_dips}</span></div>
-                <div className="text-slate-500">Pending Review: <span className="font-mono text-slate-700">{status.pending_review}</span></div>
-                <div className="text-slate-500">Pending Approval: <span className="font-mono text-slate-700">{status.pending_approval}</span></div>
-                <div className="text-slate-500">Exceptions: <span className="font-mono text-slate-700">{status.exceptions}</span></div>
+                <div className="text-dragon-text-secondary">Total Dips: <span className="font-mono text-dragon-text">{status.total_dips}</span></div>
+                <div className="text-dragon-text-secondary">Pending Review: <span className="font-mono text-dragon-text">{status.pending_review}</span></div>
+                <div className="text-dragon-text-secondary">Pending Approval: <span className="font-mono text-dragon-text">{status.pending_approval}</span></div>
+                <div className="text-dragon-text-secondary">Exceptions: <span className="font-mono text-dragon-text">{status.exceptions}</span></div>
               </div>
 
               {!status.is_closed && (
-                <div className="border-t border-slate-100 pt-3">
+                <div className="border-t border-dragon-border pt-3">
                   <textarea
                     value={shiftRemarks[status.shift_id] || ''}
                     onChange={(e) => setShiftRemarks((prev) => ({ ...prev, [status.shift_id]: e.target.value }))}
-                    className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
+                    className="input-field resize-none"
                     rows={2}
                     placeholder="Closing remarks..."
                   />
                   <button
                     onClick={() => handleCloseShift(status.shift_id)}
                     disabled={closing}
-                    className="mt-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+                    className="mt-2 btn btn-primary"
                   >
                     {closing && closingShiftId === status.shift_id ? 'Closing...' : 'Close Shift'}
                   </button>
@@ -119,44 +118,44 @@ export default function ShiftClosing() {
         </div>
       )}
 
-      <div className="bg-white rounded border border-slate-200 overflow-auto flex-1">
-        <table className="w-full text-xs">
-          <thead className="bg-slate-50 border-b border-slate-200">
+      <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
+        <table className="data-table w-full text-xs">
+          <thead>
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Date</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Shift</th>
-              <th className="text-right px-3 py-2 font-medium text-slate-600">Total Dips</th>
-              <th className="text-right px-3 py-2 font-medium text-slate-600">Exceptions</th>
-              <th className="text-right px-3 py-2 font-medium text-slate-600">Pending</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Status</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Closed At</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Remarks</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Date</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Shift</th>
+              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Total Dips</th>
+              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Exceptions</th>
+              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Pending</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Status</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Closed At</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Remarks</th>
             </tr>
           </thead>
           <tbody>
             {history.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-slate-400">
+                <td colSpan={8} className="text-center py-8 text-dragon-text-muted">
                   No shift closing history
                 </td>
               </tr>
             ) : (
               history.map((h) => (
-                <tr key={h.id} className="border-b border-slate-100">
-                  <td className="px-3 py-2 text-slate-700">{h.date}</td>
-                  <td className="px-3 py-2 text-slate-500">{h.shift_id}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-700">{h.total_dips}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-700">{h.total_exceptions}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-700">{h.pending_items}</td>
+                <tr key={h.id}>
+                  <td className="px-3 py-2 text-dragon-text">{h.date}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{h.shift_id}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text">{h.total_dips}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text">{h.total_exceptions}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text">{h.pending_items}</td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                      h.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      h.status === 'completed' ? 'bg-dragon-success/20 text-dragon-success' : 'bg-dragon-warning/20 text-dragon-warning'
                     }`}>
                       {h.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-slate-500">{h.closed_at}</td>
-                  <td className="px-3 py-2 text-slate-500">{h.closing_remarks || '--'}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{h.closed_at}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{h.closing_remarks || '--'}</td>
                 </tr>
               ))
             )}

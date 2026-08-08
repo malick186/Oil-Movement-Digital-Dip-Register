@@ -39,41 +39,42 @@ export default function TankStatus() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <span className="text-sm text-slate-400">Loading...</span>
+      <div className="loading-state">
+        <div className="loading-spinner" />
+        <span>Loading...</span>
       </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-base font-semibold text-slate-700 mb-4">Tank Status Overview</h2>
+      <h2 className="text-xl font-bold text-dragon-text mb-4">Tank Status Overview</h2>
 
       {dashboardStats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <StatCard label="Dips Completed" value={dashboardStats.dips_completed} icon={<CheckCircle size={16} />} color="text-green-600" bg="bg-green-50" />
-          <StatCard label="Dips Pending" value={dashboardStats.dips_pending} icon={<Activity size={16} />} color="text-amber-600" bg="bg-amber-50" />
-          <StatCard label="Rechecks" value={dashboardStats.recheck_required} icon={<AlertTriangle size={16} />} color="text-orange-600" bg="bg-orange-50" />
-          <StatCard label="Abnormal" value={dashboardStats.abnormal_diff} icon={<XCircle size={16} />} color="text-red-600" bg="bg-red-50" />
+          <StatCard label="Dips Completed" value={dashboardStats.dips_completed} icon={<CheckCircle size={16} />} color="text-dragon-success" />
+          <StatCard label="Dips Pending" value={dashboardStats.dips_pending} icon={<Activity size={16} />} color="text-dragon-warning" />
+          <StatCard label="Rechecks" value={dashboardStats.recheck_required} icon={<AlertTriangle size={16} />} color="text-dragon-warning" />
+          <StatCard label="Abnormal" value={dashboardStats.abnormal_diff} icon={<XCircle size={16} />} color="text-dragon-danger" />
         </div>
       )}
 
-      <div className="bg-white rounded border border-slate-200 overflow-auto flex-1">
-        <table className="w-full text-xs">
-          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+      <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
+        <table className="data-table w-full text-xs">
+          <thead>
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Tank</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Product</th>
-              <th className="text-right px-3 py-2 font-medium text-slate-600">Gross Dip</th>
-              <th className="text-right px-3 py-2 font-medium text-slate-600">G-A Diff</th>
-              <th className="text-right px-3 py-2 font-medium text-slate-600">G-R Diff</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Severity</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Tank</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Product</th>
+              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Gross Dip</th>
+              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">G-A Diff</th>
+              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">G-R Diff</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Severity</th>
             </tr>
           </thead>
           <tbody>
             {attentionItems.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-8 text-slate-400">
+                <td colSpan={6} className="text-center py-8 text-dragon-text-muted">
                   No attention items
                 </td>
               </tr>
@@ -83,19 +84,19 @@ export default function TankStatus() {
                   return (
                 <tr
                   key={item.dip_id}
-                  className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
+                  className="cursor-pointer"
                   onClick={() => setSelectedTankId(item.dip_id)}
                 >
-                  <td className="px-3 py-2 font-medium text-slate-700">{item.tank_no}</td>
-                  <td className="px-3 py-2 text-slate-500">{item.product_name}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-700">{item.gross_dip_mm?.toFixed(1) ?? '--'}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-500">{item.gross_auto_difference?.toFixed(1) ?? '--'}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-500">{item.gross_radar_difference?.toFixed(1) ?? '--'}</td>
+                  <td className="px-3 py-2 font-medium text-dragon-text">{item.tank_no}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{item.product_name}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text">{item.gross_dip_mm?.toFixed(1) ?? '--'}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">{item.gross_auto_difference?.toFixed(1) ?? '--'}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">{item.gross_radar_difference?.toFixed(1) ?? '--'}</td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                      sev === 'recheck' ? 'bg-red-100 text-red-700' :
-                      sev === 'attention' ? 'bg-amber-100 text-amber-700' :
-                      'bg-blue-100 text-blue-700'
+                      sev === 'recheck' ? 'bg-dragon-danger/20 text-dragon-danger' :
+                      sev === 'attention' ? 'bg-dragon-warning/20 text-dragon-warning' :
+                      'bg-dragon-primary/20 text-dragon-primary'
                     }`}>
                       {sev}
                     </span>
@@ -111,20 +112,19 @@ export default function TankStatus() {
   );
 }
 
-function StatCard({ label, value, icon, color, bg }: {
+function StatCard({ label, value, icon, color }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   color: string;
-  bg: string;
 }) {
   return (
-    <div className={`${bg} rounded border border-slate-200 p-3`}>
+    <div className="glass-card p-3">
       <div className="flex items-center gap-2">
         <span className={color}>{icon}</span>
-        <span className="text-xs text-slate-500">{label}</span>
+        <span className="text-xs text-dragon-text-secondary">{label}</span>
       </div>
-      <div className="text-lg font-bold text-slate-700 mt-1">{value}</div>
+      <div className="text-lg font-bold text-dragon-text mt-1">{value}</div>
     </div>
   );
 }

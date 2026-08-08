@@ -117,10 +117,10 @@ export default function Reports() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <h2 className="text-base font-semibold text-slate-700 mb-4">Reports</h2>
+    <div className="space-y-4 anim-fade-up h-full flex flex-col">
+      <h2 className="text-xl font-bold text-dragon-text">Reports</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {reports.map((r) => (
           <button
             key={r.id}
@@ -132,52 +132,52 @@ export default function Reports() {
             }}
             className={`text-left p-3 rounded border transition-colors ${
               selectedReport === r.id
-                ? 'border-blue-300 bg-blue-50'
-                : 'border-slate-200 bg-white hover:border-slate-300'
+                ? 'border-dragon-primary glass-panel'
+                : 'glass-card hover:border-dragon-border'
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
-              <FileText size={16} className="text-slate-400" />
-              <span className="text-sm font-medium text-slate-700">{r.label}</span>
+              <FileText size={16} className="text-dragon-text-muted" />
+              <span className="text-sm font-medium text-dragon-text">{r.label}</span>
             </div>
-            <p className="text-xs text-slate-400">{r.desc}</p>
+            <p className="text-xs text-dragon-text-muted">{r.desc}</p>
           </button>
         ))}
       </div>
 
       {selectedReport && (
-        <div className="bg-white rounded border border-slate-200 p-4 mb-4">
-          <h3 className="text-sm font-medium text-slate-700 mb-3">Report Parameters</h3>
+        <div className="glass-panel p-4">
+          <h3 className="text-lg font-bold text-dragon-text mb-3">Report Parameters</h3>
           <div className="flex gap-3 items-end flex-wrap">
             {(selectedReport === 'daily-dip' || selectedReport === 'audit-trail') && (
               <>
                 <div>
-                  <label className="block text-[11px] text-slate-500 mb-0.5">From</label>
+                  <label className="block text-xs font-medium text-dragon-text-secondary mb-1">From</label>
                   <input
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500"
+                    className="input-field"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 mb-0.5">To</label>
+                  <label className="block text-xs font-medium text-dragon-text-secondary mb-1">To</label>
                   <input
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500"
+                    className="input-field"
                   />
                 </div>
               </>
             )}
             {selectedReport === 'tank-wise' && (
               <div>
-                <label className="block text-[11px] text-slate-500 mb-0.5">Tank</label>
+                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Tank</label>
                 <select
                   value={tankId ?? ''}
                   onChange={(e) => setTankId(e.target.value ? Number(e.target.value) : null)}
-                  className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500"
+                  className="input-field"
                   disabled={loadingTanks}
                 >
                   <option value="">Select tank...</option>
@@ -190,7 +190,7 @@ export default function Reports() {
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs px-3 py-1.5 rounded transition-colors"
+              className="btn btn-primary flex items-center gap-1"
             >
               {loading ? 'Generating...' : (
                 <>
@@ -202,7 +202,7 @@ export default function Reports() {
             {resultData && resultData.length > 0 && (
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded transition-colors"
+                className="btn btn-primary flex items-center gap-1"
               >
                 <Download size={14} />
                 Export CSV
@@ -213,18 +213,18 @@ export default function Reports() {
       )}
 
       {msg && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-2 rounded mb-3">
+        <div className="notice-banner warning">
           {msg}
         </div>
       )}
 
       {resultData && resultData.length > 0 && (
-        <div className="bg-white rounded border border-slate-200 overflow-auto flex-1">
-          <table className="w-full text-[10px]">
-            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+        <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
+          <table className="data-table w-full text-xs">
+            <thead className="sticky top-0">
               <tr>
                 {Object.keys(resultData[0] as Record<string, unknown>).slice(0, 12).map((key) => (
-                  <th key={key} className="text-left px-2 py-1.5 font-medium text-slate-600 whitespace-nowrap">
+                  <th key={key} className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary whitespace-nowrap">
                     {key.replace(/_/g, ' ')}
                   </th>
                 ))}
@@ -232,9 +232,9 @@ export default function Reports() {
             </thead>
             <tbody>
               {resultData.map((row, idx) => (
-                <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr key={idx} className="border-b border-dragon-border hover:bg-dragon-bg">
                   {Object.values(row as Record<string, unknown>).slice(0, 12).map((val, vi) => (
-                    <td key={vi} className="px-2 py-1 text-slate-600 whitespace-nowrap">
+                    <td key={vi} className="px-2 py-1 text-dragon-text-secondary whitespace-nowrap">
                       {val === null || val === undefined ? '--' : String(val)}
                     </td>
                   ))}
@@ -246,7 +246,9 @@ export default function Reports() {
       )}
 
       {resultData && resultData.length === 0 && (
-        <div className="text-xs text-slate-400 text-center py-8">No data found for this report</div>
+        <div className="empty-state py-8">
+          <span className="empty-state-text">No data found for this report</span>
+        </div>
       )}
     </div>
   );

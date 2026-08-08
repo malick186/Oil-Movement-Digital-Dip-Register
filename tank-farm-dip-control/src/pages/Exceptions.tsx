@@ -42,70 +42,71 @@ export default function Exceptions() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <span className="text-sm text-slate-400">Loading...</span>
+      <div className="loading-state">
+        <div className="loading-spinner" />
+        <span>Loading...</span>
       </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-base font-semibold text-slate-700 mb-4">Exceptions</h2>
+      <h2 className="text-xl font-bold text-dragon-text mb-4">Exceptions</h2>
 
-      <div className="bg-white rounded border border-slate-200 overflow-auto flex-1">
-        <table className="w-full text-xs">
-          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+      <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
+        <table className="data-table w-full text-xs">
+          <thead>
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">ID</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Type</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Severity</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Actual</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Expected Tolerance</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Status</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Created</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600">Resolution</th>
-              <th className="text-center px-3 py-2 font-medium text-slate-600">Actions</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">ID</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Type</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Severity</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Actual</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Expected Tolerance</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Status</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Created</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Resolution</th>
+              <th className="text-center px-3 py-2 font-medium text-dragon-text-secondary">Actions</th>
             </tr>
           </thead>
           <tbody>
             {exceptions.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-8 text-slate-400">
+                <td colSpan={9} className="text-center py-8 text-dragon-text-muted">
                   No exceptions found
                 </td>
               </tr>
             ) : (
               exceptions.map((e) => (
-                <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-3 py-2 font-mono text-slate-700">{e.id}</td>
-                  <td className="px-3 py-2 text-slate-600">{e.exception_type}</td>
+                <tr key={e.id}>
+                  <td className="px-3 py-2 font-mono text-dragon-text">{e.id}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{e.exception_type}</td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                      e.severity === 'critical' ? 'bg-red-100 text-red-700' :
-                      e.severity === 'warning' ? 'bg-amber-100 text-amber-700' :
-                      'bg-blue-100 text-blue-700'
+                      e.severity === 'critical' ? 'bg-dragon-danger/20 text-dragon-danger' :
+                      e.severity === 'warning' ? 'bg-dragon-warning/20 text-dragon-warning' :
+                      'bg-dragon-primary/20 text-dragon-primary'
                     }`}>
                       {e.severity}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-slate-600">{e.actual_value}</td>
-                  <td className="px-3 py-2 text-slate-600">{e.expected_tolerance}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{e.actual_value}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{e.expected_tolerance}</td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                      e.status === 'resolved' ? 'bg-green-100 text-green-700' :
-                      e.status === 'acknowledged' ? 'bg-blue-100 text-blue-700' :
-                      'bg-red-100 text-red-700'
+                      e.status === 'resolved' ? 'bg-dragon-success/20 text-dragon-success' :
+                      e.status === 'acknowledged' ? 'bg-dragon-primary/20 text-dragon-primary' :
+                      'bg-dragon-danger/20 text-dragon-danger'
                     }`}>
                       {e.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-slate-500">{e.created_at}</td>
-                  <td className="px-3 py-2 text-slate-500 max-w-[120px] truncate">{e.resolution || '--'}</td>
+                  <td className="px-3 py-2 text-dragon-text-muted">{e.created_at}</td>
+                  <td className="px-3 py-2 text-dragon-text-muted max-w-[120px] truncate">{e.resolution || '--'}</td>
                   <td className="px-3 py-2 text-center">
                     {e.status !== 'resolved' && (
                       <button
                         onClick={() => setSelectedId(e.id)}
-                        className="px-2 py-0.5 text-[10px] bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition-colors"
+                        className="btn btn-primary btn-sm"
                       >
                         Resolve
                       </button>
@@ -126,26 +127,26 @@ export default function Exceptions() {
           aria-label={`Resolve Exception ${selectedId}`}
           onKeyDown={(e) => { if (e.key === 'Escape') { setSelectedId(null); setResolution(''); } }}
         >
-          <div className="bg-white rounded shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Resolve Exception #{selectedId}</h3>
+          <div className="glass-panel p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-dragon-text mb-3">Resolve Exception #{selectedId}</h3>
             <textarea
               value={resolution}
               onChange={(e) => setResolution(e.target.value)}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
+              className="input-field resize-none"
               rows={3}
               placeholder="Enter resolution details..."
             />
             <div className="flex gap-2 justify-end mt-3">
               <button
                 onClick={() => { setSelectedId(null); setResolution(''); }}
-                className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded"
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
               <button
                 onClick={handleResolve}
                 disabled={resolving || !resolution}
-                className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 py-1 rounded"
+                className="btn btn-primary"
               >
                 {resolving ? 'Saving...' : 'Resolve'}
               </button>

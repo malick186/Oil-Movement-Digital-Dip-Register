@@ -7,7 +7,7 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Activity,
+  Zap,
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -21,16 +21,17 @@ export default function Dashboard() {
 
   if (isLoadingStats) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <span className="text-sm text-slate-400">Loading dashboard...</span>
+      <div className="loading-state">
+        <div className="loading-spinner" />
+        <span>Loading dashboard...</span>
       </div>
     );
   }
 
   if (!dashboardStats) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <span className="text-sm text-slate-400">No data available</span>
+      <div className="empty-state">
+        <span className="empty-state-text">No data available</span>
       </div>
     );
   }
@@ -40,84 +41,97 @@ export default function Dashboard() {
       label: 'Active Tanks',
       value: dashboardStats.active_tanks,
       sub: 'Total active',
-      icon: <Cylinder size={20} />,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      icon: Cylinder,
+      color: 'text-dragon-primary',
+      bg: 'bg-dragon-primary/10',
     },
     {
       label: 'Dips Completed',
       value: dashboardStats.dips_completed,
       sub: `${dashboardStats.dips_pending} pending`,
-      icon: <ClipboardList size={20} />,
-      color: 'text-green-600',
-      bg: 'bg-green-50',
+      icon: ClipboardList,
+      color: 'text-dragon-success',
+      bg: 'bg-dragon-success/10',
     },
     {
       label: 'Awaiting Review',
       value: dashboardStats.awaiting_review,
       sub: 'Needs verification',
-      icon: <Clock size={20} />,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      icon: Clock,
+      color: 'text-dragon-warning',
+      bg: 'bg-dragon-warning/10',
     },
     {
       label: 'Recheck Required',
       value: dashboardStats.recheck_required,
       sub: 'Needs re-dip',
-      icon: <AlertTriangle size={20} />,
-      color: 'text-orange-600',
-      bg: 'bg-orange-50',
+      icon: AlertTriangle,
+      color: 'text-dragon-warning',
+      bg: 'bg-dragon-warning/10',
     },
     {
       label: 'Abnormal Diff',
       value: dashboardStats.abnormal_diff,
       sub: 'Outside tolerance',
-      icon: <XCircle size={20} />,
-      color: 'text-red-600',
-      bg: 'bg-red-50',
+      icon: XCircle,
+      color: 'text-dragon-danger',
+      bg: 'bg-dragon-danger/10',
     },
     {
       label: 'Approved',
       value: dashboardStats.approved,
       sub: 'Finalized records',
-      icon: <CheckCircle size={20} />,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50',
+      icon: CheckCircle,
+      color: 'text-dragon-teal',
+      bg: 'bg-dragon-teal/10',
     },
   ];
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-slate-700">Dashboard</h2>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-dragon-text">Dashboard</h2>
+          <p className="text-xs text-dragon-text-secondary mt-0.5">
+            Tank farm dip status overview
+          </p>
+        </div>
         <div className="flex items-center gap-2 text-xs">
-          <Activity size={14} className="text-slate-400" />
-          <span className="text-slate-500">
+          <span className="status-dot active" />
+          <span className="text-dragon-text-secondary">
             Shift Status: {dashboardStats.shift_closing_status}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {cards.map((card) => (
-          <div
-            key={card.label}
-            className="bg-white rounded border border-slate-200 p-3"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className={card.color}>{card.icon}</span>
-              <span className="text-xs text-slate-500">{card.label}</span>
+          <div key={card.label} className="glass-stat">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className={`w-9 h-9 rounded-lg ${card.bg} flex items-center justify-center`}>
+                <card.icon size={18} className={card.color} />
+              </div>
+              <span className="text-[11px] font-medium text-dragon-text-muted uppercase tracking-wider">
+                {card.label}
+              </span>
             </div>
-            <div className="text-xl font-bold text-slate-800">{card.value}</div>
-            <div className="text-[11px] text-slate-400">{card.sub}</div>
+            <div className="text-2xl font-bold text-dragon-text">{card.value}</div>
+            <div className="text-[11px] text-dragon-text-muted mt-0.5">{card.sub}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded border border-slate-200 p-4 flex-1">
-        <h3 className="text-sm font-medium text-slate-600 mb-3">Recent Activity</h3>
-        <div className="text-xs text-slate-400">
-          Dashboard data loaded. Navigate to individual sections for details.
+      <div className="glass-panel p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-dragon-primary/10 flex items-center justify-center">
+            <Zap size={16} className="text-dragon-primary" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-dragon-text">Recent Activity</h3>
+            <p className="text-xs text-dragon-text-muted mt-0.5">
+              Dashboard data loaded. Navigate to individual sections for details.
+            </p>
+          </div>
         </div>
       </div>
     </div>

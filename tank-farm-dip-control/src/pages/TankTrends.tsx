@@ -51,15 +51,15 @@ export default function TankTrends() {
   }, [selectedTank]);
 
   return (
-    <div className="h-full flex flex-col">
-      <h2 className="text-base font-semibold text-slate-700 mb-4">Tank Trends</h2>
+    <div className="space-y-4 anim-fade-up h-full flex flex-col">
+      <h2 className="text-xl font-bold text-dragon-text">Tank Trends</h2>
 
-      <div className="flex items-center gap-2 mb-4">
-        <label className="text-xs text-slate-600">Tank:</label>
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-dragon-text-secondary">Tank:</label>
         <select
           value={selectedTank}
           onChange={(e) => setSelectedTank(e.target.value ? Number(e.target.value) : '')}
-          className="border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500"
+          className="input-field"
         >
           <option value="">Select a tank...</option>
           {tanks.map((t) => (
@@ -71,30 +71,31 @@ export default function TankTrends() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center flex-1">
-          <span className="text-sm text-slate-400">Loading...</span>
+        <div className="loading-state flex-1">
+          <div className="loading-spinner" />
+          <span>Loading...</span>
         </div>
       ) : !selectedTank ? (
-        <div className="flex items-center justify-center flex-1">
-          <span className="text-sm text-slate-400">Select a tank to view trends</span>
+        <div className="empty-state flex-1">
+          <span className="empty-state-text">Select a tank to view trends</span>
         </div>
       ) : records.length === 0 ? (
-        <div className="flex items-center justify-center flex-1">
-          <span className="text-sm text-slate-400">No data available for this tank</span>
+        <div className="empty-state flex-1">
+          <span className="empty-state-text">No data available for this tank</span>
         </div>
       ) : (
-        <div className="bg-white rounded border border-slate-200 p-4 flex-1">
+        <div className="glass-panel rounded-xl p-4 flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={records} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#94a3b8" />
-              <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#64748b" />
+              <YAxis tick={{ fontSize: 10 }} stroke="#64748b" />
               <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 4, border: '1px solid #e2e8f0' }}
+                contentStyle={{ fontSize: 11, borderRadius: 4, border: '1px solid #334155' }}
               />
-              <Line type="monotone" dataKey="gross" stroke="#2563eb" strokeWidth={2} dot={false} name="Gross Dip" />
-              <Line type="monotone" dataKey="auto" stroke="#16a34a" strokeWidth={1.5} dot={false} name="Auto Dip" />
-              <Line type="monotone" dataKey="radar" stroke="#ea580c" strokeWidth={1.5} dot={false} name="Radar Dip" />
+              <Line type="monotone" dataKey="gross" stroke="#3b82f6" strokeWidth={2} dot={false} name="Gross Dip" />
+              <Line type="monotone" dataKey="auto" stroke="#22c55e" strokeWidth={1.5} dot={false} name="Auto Dip" />
+              <Line type="monotone" dataKey="radar" stroke="#f97316" strokeWidth={1.5} dot={false} name="Radar Dip" />
             </LineChart>
           </ResponsiveContainer>
         </div>

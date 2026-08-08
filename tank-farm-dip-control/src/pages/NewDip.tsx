@@ -101,37 +101,38 @@ export default function NewDip() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <span className="text-sm text-slate-400">Loading...</span>
+      <div className="loading-state">
+        <div className="loading-spinner" />
+        <span>Loading...</span>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <h2 className="text-base font-semibold text-slate-700 mb-4">New Dip Entry</h2>
+    <div className="h-full flex flex-col anim-fade-up">
+      <h2 className="text-xl font-bold text-dragon-text mb-4">New Dip Entry</h2>
 
       {successMsg && (
-        <div className="bg-green-50 border border-green-200 text-green-700 text-xs px-3 py-2 rounded mb-3">
+        <div className="notice-banner success mb-3">
           {successMsg}
         </div>
       )}
       {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded mb-3">
+        <div className="notice-banner error mb-3">
           {errorMsg}
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded border border-slate-200 p-4 overflow-auto flex-1">
+      <form onSubmit={handleSubmit(onSubmit)} className="glass-card p-4 overflow-auto flex-1">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {activeShifts.length > 0 && (
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
+              <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
                 Shift <span className="text-red-500">*</span>
               </label>
               <select
                 {...register('shift_id', { valueAsNumber: true })}
-                className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                className="input-field"
               >
                 {activeShifts.map((sh) => (
                   <option key={sh.shift_id} value={sh.shift_id}>
@@ -140,22 +141,22 @@ export default function NewDip() {
                 ))}
               </select>
               {errors.shift_id && (
-                <p className="text-red-500 text-xs mt-1">{errors.shift_id.message}</p>
+                <p className="text-dragon-danger text-xs mt-1">{errors.shift_id.message}</p>
               )}
             </div>
           )}
           {activeShifts.length === 0 && (
-            <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2">
+            <div className="notice-banner warning">
               No active shifts. Please configure shifts in Shift Closing.
             </div>
           )}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Tank <span className="text-red-500">*</span>
             </label>
             <select
               {...register('tank_id', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
             >
               <option value="">Select tank...</option>
               {tanks.map((t) => (
@@ -165,17 +166,17 @@ export default function NewDip() {
               ))}
             </select>
             {errors.tank_id && (
-              <p className="text-red-500 text-xs mt-1">{errors.tank_id.message}</p>
+              <p className="text-dragon-danger text-xs mt-1">{errors.tank_id.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Product <span className="text-red-500">*</span>
             </label>
             <select
               {...register('product_id', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
             >
               <option value="">Select product...</option>
               {products.map((p) => (
@@ -185,17 +186,17 @@ export default function NewDip() {
               ))}
             </select>
             {errors.product_id && (
-              <p className="text-red-500 text-xs mt-1">{errors.product_id.message}</p>
+              <p className="text-dragon-danger text-xs mt-1">{errors.product_id.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Operator
             </label>
             <select
               {...register('operator_id', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
             >
               <option value="">Select operator...</option>
               {operators.map((o) => (
@@ -207,77 +208,77 @@ export default function NewDip() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Gross Dip (mm) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               step="0.1"
               {...register('gross_dip_mm', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="0.0"
             />
             {errors.gross_dip_mm && (
-              <p className="text-red-500 text-xs mt-1">{errors.gross_dip_mm.message}</p>
+              <p className="text-dragon-danger text-xs mt-1">{errors.gross_dip_mm.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Auto Dip (mm)
             </label>
             <input
               type="number"
               step="0.1"
               {...register('auto_dip_mm', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="0.0"
               disabled={!selectedTank?.auto_dip_available}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Radar Dip (mm)
             </label>
             <input
               type="number"
               step="0.1"
               {...register('radar_dip_mm', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="0.0"
               disabled={!selectedTank?.radar_available}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Water Dip (mm)
             </label>
             <input
               type="number"
               step="0.1"
               {...register('water_dip_mm', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="0.0"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Sludge Dip (mm)
             </label>
             <input
               type="number"
               step="0.1"
               {...register('sludge_dip_mm', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="0.0"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Temperature
             </label>
             <div className="flex gap-1">
@@ -285,12 +286,12 @@ export default function NewDip() {
                 type="number"
                 step="0.1"
                 {...register('temperature', { valueAsNumber: true })}
-                className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                className="flex-1 input-field"
                 placeholder="--"
               />
               <select
                 {...register('temperature_unit')}
-                className="w-16 border border-slate-300 rounded px-1 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                className="input-field w-16"
               >
                 <option value="C">C</option>
                 <option value="F">F</option>
@@ -299,25 +300,25 @@ export default function NewDip() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Density
             </label>
             <input
               type="number"
               step="0.0001"
               {...register('density', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="0.0000"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Tank Status
             </label>
             <select
               {...register('tank_status_id', { valueAsNumber: true })}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
             >
               <option value="">Select status...</option>
               {statuses.map((s) => (
@@ -329,22 +330,22 @@ export default function NewDip() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
               Custom Status
             </label>
             <input
               {...register('custom_tank_status')}
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="Custom status..."
             />
           </div>
         </div>
 
         <div className="mt-3">
-          <label className="block text-xs font-medium text-slate-600 mb-1">Remarks</label>
+          <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Remarks</label>
           <textarea
             {...register('remarks')}
-            className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
+            className="input-field resize-none"
             rows={2}
             placeholder="Any remarks..."
           />
@@ -354,7 +355,7 @@ export default function NewDip() {
           <button
             type="submit"
             disabled={submitting}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+            className="btn btn-primary"
           >
             {submitting ? 'Saving...' : 'Save Dip Record'}
           </button>

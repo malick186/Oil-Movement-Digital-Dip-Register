@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginFormData } from '../validation/schemas';
 import { useAuthStore } from '../store/authStore';
+import { Fuel, AlertCircle } from 'lucide-react';
 
 export default function Login() {
   const login = useAuthStore((s) => s.login);
@@ -28,21 +29,37 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-slate-900">
-      <div className="w-full max-w-sm bg-slate-800 rounded-lg shadow-xl p-8">
-        <div className="text-center mb-6">
-          <h1 className="text-lg font-bold text-white tracking-wide">
-            TANK FARM CONTROL
+    <div className="flex items-center justify-center h-screen bg-dragon-bg relative overflow-hidden">
+      <div
+        className="absolute inset-0 opacity-20"
+        style={{
+          background: 'radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--dr-primary) 30%, transparent) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="glass-card w-full max-w-md p-8 anim-scale-in">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-xl bg-dragon-primary/10 flex items-center justify-center">
+              <Fuel size={24} className="text-dragon-primary" />
+            </div>
+          </div>
+          <h1 className="text-xl font-bold text-dragon-text tracking-wide">
+            Tank Farm Control
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Dip Recording Control Center
+          <p className="text-xs text-dragon-text-secondary mt-1.5">
+            Oil Movement Digital Dip Register
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-900/50 border border-red-700 text-red-300 text-xs px-3 py-2 rounded mb-4 flex justify-between items-center">
+          <div className="notice-banner error mb-6">
+            <AlertCircle size={16} />
             <span>{error}</span>
-            <button onClick={clearError} className="text-red-400 hover:text-red-200 ml-2">
+            <button
+              onClick={clearError}
+              className="ml-auto text-dragon-danger/70 hover:text-dragon-danger transition-colors"
+            >
               x
             </button>
           </div>
@@ -50,41 +67,49 @@ export default function Login() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label htmlFor="login-username" className="block text-xs text-slate-400 mb-1">Username</label>
+            <label htmlFor="login-username" className="block text-xs text-dragon-text-secondary mb-1.5 font-medium">
+              Username
+            </label>
             <input
               id="login-username"
               {...register('username')}
-              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="Enter username"
               autoFocus
             />
             {errors.username && (
-              <p className="text-red-400 text-xs mt-1">{errors.username.message}</p>
+              <p className="text-dragon-danger text-xs mt-1">{errors.username.message}</p>
             )}
           </div>
 
           <div>
-            <label htmlFor="login-password" className="block text-xs text-slate-400 mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-xs text-dragon-text-secondary mb-1.5 font-medium">
+              Password
+            </label>
             <input
               id="login-password"
               type="password"
               {...register('password')}
-              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="input-field"
               placeholder="Enter password"
             />
             {errors.password && (
-              <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>
+              <p className="text-dragon-danger text-xs mt-1">{errors.password.message}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-sm font-medium py-2 rounded transition-colors"
+            className="btn btn-primary w-full mt-2"
           >
             {submitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <p className="text-center text-[10px] text-dragon-text-muted mt-6">
+          v0.1.4
+        </p>
       </div>
     </div>
   );

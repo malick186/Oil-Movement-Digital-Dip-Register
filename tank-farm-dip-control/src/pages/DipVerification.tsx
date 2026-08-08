@@ -36,80 +36,81 @@ export default function DipVerification() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <span className="text-sm text-slate-400">Loading...</span>
+      <div className="loading-state">
+        <div className="loading-spinner" />
+        <span>Loading...</span>
       </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-base font-semibold text-slate-700 mb-4">
+      <h2 className="text-xl font-bold text-dragon-text mb-4">
         Dip Verification ({records.length} pending)
       </h2>
 
       {actionMsg && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-xs px-3 py-2 rounded mb-3">
+        <div className="notice-banner info mb-3">
           {actionMsg}
         </div>
       )}
 
       {records.length === 0 ? (
-        <div className="flex items-center justify-center flex-1">
-          <span className="text-sm text-slate-400">No records pending verification</span>
+        <div className="empty-state">
+          <span className="empty-state-text">No records pending verification</span>
         </div>
       ) : (
-        <div className="bg-white rounded border border-slate-200 overflow-auto flex-1">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200">
+        <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
+          <table className="data-table w-full text-xs">
+            <thead>
               <tr>
-                <th className="text-left px-3 py-2 font-medium text-slate-600">Record #</th>
-                <th className="text-left px-3 py-2 font-medium text-slate-600">Date/Time</th>
-                <th className="text-left px-3 py-2 font-medium text-slate-600">Tank</th>
-                <th className="text-left px-3 py-2 font-medium text-slate-600">Product</th>
-                <th className="text-right px-3 py-2 font-medium text-slate-600">Gross</th>
-                <th className="text-right px-3 py-2 font-medium text-slate-600">Auto</th>
-                <th className="text-right px-3 py-2 font-medium text-slate-600">Radar</th>
-                <th className="text-left px-3 py-2 font-medium text-slate-600">Operator</th>
-                <th className="text-center px-3 py-2 font-medium text-slate-600">Actions</th>
+                <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Record #</th>
+                <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Date/Time</th>
+                <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Tank</th>
+                <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Product</th>
+                <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Gross</th>
+                <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Auto</th>
+                <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Radar</th>
+                <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Operator</th>
+                <th className="text-center px-3 py-2 font-medium text-dragon-text-secondary">Actions</th>
               </tr>
             </thead>
             <tbody>
               {records.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-3 py-2 font-mono text-slate-700">{r.record_number}</td>
-                  <td className="px-3 py-2 text-slate-500">
+                <tr key={r.id}>
+                  <td className="px-3 py-2 font-mono text-dragon-text">{r.record_number}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">
                     {r.date} {r.time}
                   </td>
-                  <td className="px-3 py-2 font-medium text-slate-700">{r.tank_no}</td>
-                  <td className="px-3 py-2 text-slate-500">{r.product_name}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-700">{r.gross_dip_mm.toFixed(1)}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-500">{r.auto_dip_mm?.toFixed(1) ?? '--'}</td>
-                  <td className="px-3 py-2 text-right font-mono text-slate-500">{r.radar_dip_mm?.toFixed(1) ?? '--'}</td>
-                  <td className="px-3 py-2 text-slate-500">{r.operator_name || '--'}</td>
+                  <td className="px-3 py-2 font-medium text-dragon-text">{r.tank_no}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{r.product_name}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text">{r.gross_dip_mm.toFixed(1)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">{r.auto_dip_mm?.toFixed(1) ?? '--'}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">{r.radar_dip_mm?.toFixed(1) ?? '--'}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{r.operator_name || '--'}</td>
                   <td className="px-3 py-2 text-center">
                     <div className="flex gap-1 justify-center">
                       <button
                         onClick={() => setSelectedRecord(r)}
-                        className="px-2 py-0.5 text-[10px] bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+                        className="btn btn-secondary btn-sm"
                       >
                         View
                       </button>
                       <button
                         onClick={() => handleReview(r.id, 'approve')}
-                        className="px-2 py-0.5 text-[10px] bg-green-100 text-green-700 hover:bg-green-200 rounded transition-colors"
+                        className="btn btn-primary btn-sm"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => handleReview(r.id, 'reject')}
-                        className="px-2 py-0.5 text-[10px] bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors"
+                        className="btn btn-danger btn-sm"
                       >
                         Reject
                       </button>
                       <button
                         onClick={() => handleReview(r.id, 'recheck')}
-                        className="px-2 py-0.5 text-[10px] bg-amber-100 text-amber-700 hover:bg-amber-200 rounded transition-colors"
+                        className="btn btn-secondary btn-sm"
                       >
                         Recheck
                       </button>
@@ -130,8 +131,8 @@ export default function DipVerification() {
           aria-label={`Record Details - ${selectedRecord.record_number}`}
           onKeyDown={(e) => { if (e.key === 'Escape') setSelectedRecord(null); }}
         >
-          <div className="bg-white rounded shadow-xl p-6 w-full max-w-lg max-h-[80vh] overflow-auto">
-            <h3 className="text-sm font-semibold text-slate-700 mb-4">
+          <div className="glass-panel p-6 w-full max-w-lg max-h-[80vh] overflow-auto">
+            <h3 className="text-xl font-bold text-dragon-text mb-4">
               Record Details - {selectedRecord.record_number}
             </h3>
             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -154,7 +155,7 @@ export default function DipVerification() {
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setSelectedRecord(null)}
-                className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded"
+                className="btn btn-secondary"
               >
                 Close
               </button>
@@ -169,8 +170,8 @@ export default function DipVerification() {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <>
-      <span className="text-slate-500">{label}</span>
-      <span className="text-slate-700 font-medium">{value}</span>
+      <span className="text-dragon-text-secondary">{label}</span>
+      <span className="text-dragon-text font-medium">{value}</span>
     </>
   );
 }

@@ -54,8 +54,11 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-100">
-        <div className="text-slate-400 text-sm">Loading...</div>
+      <div className="flex items-center justify-center h-screen bg-dragon-bg">
+        <div className="loading-state">
+          <div className="loading-spinner" />
+          <span>Loading...</span>
+        </div>
       </div>
     );
   }

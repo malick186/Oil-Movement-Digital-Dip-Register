@@ -94,12 +94,12 @@ export default function TankMaster() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-slate-700">Tank Master</h2>
+    <div className="space-y-4 anim-fade-up h-full flex flex-col">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-dragon-text">Tank Master</h2>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 rounded transition-colors"
+          className="btn btn-primary flex items-center gap-1"
         >
           <Plus size={14} />
           Add Tank
@@ -107,14 +107,14 @@ export default function TankMaster() {
       </div>
 
       {msg && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-xs px-3 py-2 rounded mb-3">
+        <div className="notice-banner info">
           {msg}
         </div>
       )}
 
       {showForm && (
-        <div className="bg-white rounded border border-slate-200 p-4 mb-4 overflow-auto">
-          <h3 className="text-sm font-medium text-slate-700 mb-3">
+        <div className="glass-panel p-4">
+          <h3 className="text-lg font-bold text-dragon-text mb-3">
             {editingId ? 'Edit Tank' : 'New Tank'}
           </h3>
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -162,36 +162,36 @@ export default function TankMaster() {
                 <input {...register('remarks')} className="input-field" />
               </Field>
               <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 text-xs text-slate-600">
+                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
                   <input type="checkbox" {...register('radar_available')} />
                   Radar Available
                 </label>
-                <label className="flex items-center gap-2 text-xs text-slate-600">
+                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
                   <input type="checkbox" {...register('auto_dip_available')} />
                   Auto Dip Available
                 </label>
-                <label className="flex items-center gap-2 text-xs text-slate-600">
+                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
                   <input type="checkbox" {...register('water_dip_applicable')} />
                   Water Dip
                 </label>
-                <label className="flex items-center gap-2 text-xs text-slate-600">
+                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
                   <input type="checkbox" {...register('sludge_dip_applicable')} />
                   Sludge Dip
                 </label>
-                <label className="flex items-center gap-2 text-xs text-slate-600">
+                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
                   <input type="checkbox" {...register('active')} />
                   Active
                 </label>
               </div>
             </div>
             <div className="flex gap-2 mt-4">
-              <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded">
+              <button type="submit" className="btn btn-primary">
                 {editingId ? 'Update' : 'Create'}
               </button>
               <button
                 type="button"
                 onClick={() => { setShowForm(false); setEditingId(null); }}
-                className="bg-slate-100 hover:bg-slate-200 text-xs px-3 py-1.5 rounded"
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
@@ -200,47 +200,47 @@ export default function TankMaster() {
         </div>
       )}
 
-      <div className="bg-white rounded border border-slate-200 overflow-auto flex-1">
-        <table className="w-full text-[11px]">
-          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+      <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
+        <table className="data-table w-full text-xs">
+          <thead className="sticky top-0">
             <tr>
-              <th className="text-left px-2 py-1.5 font-medium text-slate-600">Tank No</th>
-              <th className="text-left px-2 py-1.5 font-medium text-slate-600">Location</th>
-              <th className="text-left px-2 py-1.5 font-medium text-slate-600">Farm</th>
-              <th className="text-left px-2 py-1.5 font-medium text-slate-600">Product</th>
-              <th className="text-left px-2 py-1.5 font-medium text-slate-600">Type</th>
-              <th className="text-left px-2 py-1.5 font-medium text-slate-600">Roof</th>
-              <th className="text-right px-2 py-1.5 font-medium text-slate-600">Safe Fill</th>
-              <th className="text-center px-2 py-1.5 font-medium text-slate-600">Radar</th>
-              <th className="text-center px-2 py-1.5 font-medium text-slate-600">Auto</th>
-              <th className="text-center px-2 py-1.5 font-medium text-slate-600">Active</th>
-              <th className="text-center px-2 py-1.5 font-medium text-slate-600">Actions</th>
+              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Tank No</th>
+              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Location</th>
+              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Farm</th>
+              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Product</th>
+              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Type</th>
+              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Roof</th>
+              <th className="text-right px-2 py-1.5 font-medium text-dragon-text-secondary">Safe Fill</th>
+              <th className="text-center px-2 py-1.5 font-medium text-dragon-text-secondary">Radar</th>
+              <th className="text-center px-2 py-1.5 font-medium text-dragon-text-secondary">Auto</th>
+              <th className="text-center px-2 py-1.5 font-medium text-dragon-text-secondary">Active</th>
+              <th className="text-center px-2 py-1.5 font-medium text-dragon-text-secondary">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11} className="text-center py-8 text-slate-400">Loading...</td></tr>
+              <tr><td colSpan={11} className="text-center py-8"><div className="loading-state"><div className="loading-spinner" /><span>Loading...</span></div></td></tr>
             ) : tanks.length === 0 ? (
-              <tr><td colSpan={11} className="text-center py-8 text-slate-400">No tanks found</td></tr>
+              <tr><td colSpan={11} className="text-center py-8"><div className="empty-state"><span className="empty-state-text">No tanks found</span></div></td></tr>
             ) : (
               tanks.map((t) => (
-                <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-2 py-1 font-medium text-slate-700">{t.tank_no}</td>
-                  <td className="px-2 py-1 text-slate-500">{t.location}</td>
-                  <td className="px-2 py-1 text-slate-500">{t.tank_farm}</td>
-                  <td className="px-2 py-1 text-slate-500">{t.current_product || t.normal_product || '--'}</td>
-                  <td className="px-2 py-1 text-slate-500">{t.tank_type || '--'}</td>
-                  <td className="px-2 py-1 text-slate-500">{t.roof_type || '--'}</td>
-                  <td className="px-2 py-1 text-right text-slate-500">{t.safe_fill_height ?? '--'}</td>
-                  <td className="px-2 py-1 text-center">{t.radar_available ? <span className="text-green-600">Yes</span> : <span className="text-slate-300">No</span>}</td>
-                  <td className="px-2 py-1 text-center">{t.auto_dip_available ? <span className="text-green-600">Yes</span> : <span className="text-slate-300">No</span>}</td>
-                  <td className="px-2 py-1 text-center">{t.active ? <span className="text-green-600">Yes</span> : <span className="text-red-500">No</span>}</td>
+                <tr key={t.id} className="border-b border-dragon-border hover:bg-dragon-bg">
+                  <td className="px-2 py-1 font-medium text-dragon-text">{t.tank_no}</td>
+                  <td className="px-2 py-1 text-dragon-text-secondary">{t.location}</td>
+                  <td className="px-2 py-1 text-dragon-text-secondary">{t.tank_farm}</td>
+                  <td className="px-2 py-1 text-dragon-text-secondary">{t.current_product || t.normal_product || '--'}</td>
+                  <td className="px-2 py-1 text-dragon-text-secondary">{t.tank_type || '--'}</td>
+                  <td className="px-2 py-1 text-dragon-text-secondary">{t.roof_type || '--'}</td>
+                  <td className="px-2 py-1 text-right text-dragon-text-secondary">{t.safe_fill_height ?? '--'}</td>
+                  <td className="px-2 py-1 text-center">{t.radar_available ? <span className="badge badge-success">Yes</span> : <span className="text-dragon-text-muted">No</span>}</td>
+                  <td className="px-2 py-1 text-center">{t.auto_dip_available ? <span className="badge badge-success">Yes</span> : <span className="text-dragon-text-muted">No</span>}</td>
+                  <td className="px-2 py-1 text-center">{t.active ? <span className="badge badge-success">Yes</span> : <span className="badge badge-danger">No</span>}</td>
                   <td className="px-2 py-1 text-center">
                     <div className="flex gap-1 justify-center">
-                      <button onClick={() => handleEdit(t)} className="p-0.5 text-slate-400 hover:text-blue-600 transition-colors">
+                      <button onClick={() => handleEdit(t)} className="p-0.5 text-dragon-text-muted hover:text-dragon-primary transition-colors">
                         <Pencil size={13} />
                       </button>
-                      <button onClick={async () => { try { await api.deleteTank(t.id); loadTanks(); } catch {} }} className="p-0.5 text-slate-400 hover:text-red-600 transition-colors">
+                      <button onClick={async () => { try { await api.deleteTank(t.id); loadTanks(); } catch {} }} className="p-0.5 text-dragon-text-muted hover:text-dragon-danger transition-colors">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -263,11 +263,11 @@ function Field({ label, required, error, children }: {
 }) {
   return (
     <div>
-      <label className="block text-[11px] font-medium text-slate-600 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
+        {label} {required && <span className="text-dragon-danger">*</span>}
       </label>
       {children}
-      {error && <p className="text-red-500 text-[10px] mt-0.5">{error}</p>}
+      {error && <p className="text-dragon-danger text-xs mt-0.5">{error}</p>}
     </div>
   );
 }
