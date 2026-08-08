@@ -119,7 +119,13 @@ export default function Exceptions() {
       </div>
 
       {selectedId != null && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Resolve Exception ${selectedId}`}
+          onKeyDown={(e) => { if (e.key === 'Escape') { setSelectedId(null); setResolution(''); } }}
+        >
           <div className="bg-white rounded shadow-xl p-6 w-full max-w-md">
             <h3 className="text-sm font-semibold text-slate-700 mb-3">Resolve Exception #{selectedId}</h3>
             <textarea

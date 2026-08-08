@@ -81,6 +81,12 @@ pub fn restore_backup(
 
     let backup_path = backup_dir.join(&filename);
 
+    let canonical_backup_dir = backup_dir.canonicalize().map_err(|e| format!("Failed to resolve backup directory: {}", e))?;
+    let canonical_backup_path = backup_path.canonicalize().map_err(|_| "Invalid backup filename".to_string())?;
+    if !canonical_backup_path.starts_with(&canonical_backup_dir) {
+        return Err("Path traversal detected in backup filename".to_string());
+    }
+
     if !backup_path.exists() {
         return Err(format!("Backup file not found: {}", filename));
     }

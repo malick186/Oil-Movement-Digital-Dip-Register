@@ -10,6 +10,7 @@ export type LoginFormData = z.infer<typeof loginSchema>;
 export const dipEntrySchema = z.object({
   tank_id: z.number().min(1, 'Tank is required'),
   product_id: z.number().min(1, 'Product is required'),
+  shift_id: z.number().min(1, 'Shift is required'),
   gross_dip_mm: z.number().min(0, 'Gross dip must be positive'),
   auto_dip_mm: z.number().nullable().optional(),
   radar_dip_mm: z.number().nullable().optional(),

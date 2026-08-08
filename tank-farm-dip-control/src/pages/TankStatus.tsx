@@ -26,6 +26,7 @@ export default function TankStatus() {
         const items = await api.getAttentionList();
         setAttentionItems(items);
       } catch {
+        setAttentionItems([]);
       } finally {
         setLoading(false);
       }
@@ -77,11 +78,11 @@ export default function TankStatus() {
                 </td>
               </tr>
             ) : (
-              attentionItems.map((item, idx) => {
+              attentionItems.map((item) => {
                   const sev = getSeverity(item, 5);
                   return (
                 <tr
-                  key={idx}
+                  key={item.dip_id}
                   className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
                   onClick={() => setSelectedTankId(item.dip_id)}
                 >

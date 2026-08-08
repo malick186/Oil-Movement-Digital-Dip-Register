@@ -22,9 +22,11 @@ pub fn audit_log(
     reason: Option<&str>,
     remarks: Option<&str>,
 ) {
-    let _ = conn.execute(
+    if let Err(e) = conn.execute(
         "INSERT INTO audit_logs (user_id, role, action, record_id, tank_no, old_value, new_value, reason, remarks)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         rusqlite::params![user_id, role, action, record_id, tank_no, old_value, new_value, reason, remarks],
-    );
+    ) {
+        log::error!("Audit log insertion failed: {}", e);
+    }
 }

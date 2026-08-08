@@ -167,7 +167,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
             </>
           )}
           <span>|</span>
-          <span>v0.1.0</span>
+          <span>v0.1.4</span>
         </footer>
       </div>
     </div>

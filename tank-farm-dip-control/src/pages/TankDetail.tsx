@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import * as api from '../services/api';
 import type { Tank, DipRecordWithRelations } from '../types';
 import { Cylinder, TrendingUp, History } from 'lucide-react';
+import { useAppStore } from '../store/appStore';
 
 interface Props {
   tankId: number;
@@ -94,6 +95,7 @@ export default function TankDetail({ tankId, onBack }: Props) {
           Dip History
         </button>
         <button
+          onClick={() => useAppStore.getState().setPage('tank-trends')}
           className="text-xs px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
         >
           <TrendingUp size={14} className="inline mr-1" />

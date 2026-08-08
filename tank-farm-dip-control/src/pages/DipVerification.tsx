@@ -123,7 +123,13 @@ export default function DipVerification() {
       )}
 
       {selectedRecord && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Record Details - ${selectedRecord.record_number}`}
+          onKeyDown={(e) => { if (e.key === 'Escape') setSelectedRecord(null); }}
+        >
           <div className="bg-white rounded shadow-xl p-6 w-full max-w-lg max-h-[80vh] overflow-auto">
             <h3 className="text-sm font-semibold text-slate-700 mb-4">
               Record Details - {selectedRecord.record_number}

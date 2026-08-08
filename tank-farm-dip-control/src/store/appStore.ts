@@ -8,6 +8,7 @@ interface AppState {
   currentShift: string;
   dashboardStats: DashboardStats | null;
   isLoadingStats: boolean;
+  statsError: string | null;
   toggleSidebar: () => void;
   setPage: (page: Page) => void;
   setCurrentShift: (shift: string) => void;
@@ -20,6 +21,7 @@ export const useAppStore = create<AppState>((set) => ({
   currentShift: '--',
   dashboardStats: null,
   isLoadingStats: false,
+  statsError: null,
 
   toggleSidebar: () =>
     set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -29,12 +31,15 @@ export const useAppStore = create<AppState>((set) => ({
   setCurrentShift: (shift: string) => set({ currentShift: shift }),
 
   loadDashboardStats: async () => {
-    set({ isLoadingStats: true });
+    set({ isLoadingStats: true, statsError: null });
     try {
       const stats = await api.getDashboardStats();
       set({ dashboardStats: stats, isLoadingStats: false });
-    } catch {
-      set({ isLoadingStats: false });
+    } catch (err) {
+      set({
+        isLoadingStats: false,
+        statsError: err instanceof Error ? err.message : 'Failed to load stats',
+      });
     }
   },
 }));

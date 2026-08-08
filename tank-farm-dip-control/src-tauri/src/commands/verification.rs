@@ -110,7 +110,7 @@ pub fn review_dip(
             )
             .map_err(|e| format!("Failed to update review: {}", e))?;
         }
-        _ => unreachable!(),
+        _ => return Err(format!("Invalid review action: {}. Must be one of: approve, recheck, reject", action)),
     }
 
     conn.execute(
@@ -369,6 +369,28 @@ pub fn approve_correction(
         crate::commands::dips::get_dip_record_by_id_raw(&conn, correction.dip_record_id)?;
     if existing.approval_status == "approved" {
         return Err("Cannot correct an approved record".to_string());
+    }
+
+    let allowed_fields: &[&str] = &[
+        "gross_dip_mm",
+        "auto_dip_mm",
+        "radar_dip_mm",
+        "water_dip_mm",
+        "sludge_dip_mm",
+        "temperature",
+        "density",
+        "operator_id",
+        "tank_status_id",
+        "product_id",
+        "remarks",
+        "custom_tank_status",
+        "temperature_unit",
+    ];
+    if !allowed_fields.contains(&correction.field_name.as_str()) {
+        return Err(format!(
+            "Invalid correction field: {}",
+            correction.field_name
+        ));
     }
 
     let sql = format!(

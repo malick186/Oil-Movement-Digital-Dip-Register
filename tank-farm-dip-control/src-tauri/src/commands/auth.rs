@@ -173,7 +173,7 @@ pub fn list_users(
             Ok(User {
                 id: row.get(0)?,
                 username: row.get(1)?,
-                password_hash: row.get(2)?,
+                password_hash: "[REDACTED]".to_string(),
                 full_name: row.get(3)?,
                 role: row.get(4)?,
                 active: row.get(5)?,
@@ -231,7 +231,7 @@ pub fn toggle_user_active(
                 Ok(User {
                     id: row.get(0)?,
                     username: row.get(1)?,
-                    password_hash: row.get(2)?,
+                    password_hash: "[REDACTED]".to_string(),
                     full_name: row.get(3)?,
                     role: row.get(4)?,
                     active: row.get(5)?,

@@ -7,7 +7,7 @@ export default function ShiftClosing() {
   const [shiftStatuses, setShiftStatuses] = useState<ShiftStatus[]>([]);
   const [history, setHistory] = useState<ShiftClosing[]>([]);
   const [closing, setClosing] = useState(false);
-  const [remarks, setRemarks] = useState('');
+  const [shiftRemarks, setShiftRemarks] = useState<Record<number, string>>({});
   const [closingShiftId, setClosingShiftId] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,9 +37,13 @@ export default function ShiftClosing() {
     setMsg(null);
     setClosingShiftId(shiftId);
     try {
-      await api.closeShift(shiftId, remarks);
+      await api.closeShift(shiftId, shiftRemarks[shiftId] || '');
       setMsg('Shift closed successfully');
-      setRemarks('');
+      setShiftRemarks((prev) => {
+        const next = { ...prev };
+        delete next[shiftId];
+        return next;
+      });
       loadData();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Failed to close shift');
@@ -95,8 +99,8 @@ export default function ShiftClosing() {
               {!status.is_closed && (
                 <div className="border-t border-slate-100 pt-3">
                   <textarea
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
+                    value={shiftRemarks[status.shift_id] || ''}
+                    onChange={(e) => setShiftRemarks((prev) => ({ ...prev, [status.shift_id]: e.target.value }))}
                     className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
                     rows={2}
                     placeholder="Closing remarks..."

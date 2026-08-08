@@ -94,8 +94,9 @@ pub fn resolve_exception(
     id: i64,
     resolution: String,
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
-    _current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
+    current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<ExceptionRecord, String> {
+    let user_id = crate::util::get_current_user_id(&current_session)?;
     let conn = db.lock().map_err(|e| e.to_string())?;
 
     let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
@@ -105,6 +106,19 @@ pub fn resolve_exception(
         params![resolution, now, id],
     )
     .map_err(|e| format!("Failed to resolve exception: {}", e))?;
+
+    crate::util::audit_log(
+        &conn,
+        user_id,
+        "",
+        "resolve_exception",
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(&format!("Resolved exception id={} with: {}", id, resolution)),
+    );
 
     conn.query_row(
         "SELECT id, dip_record_id, tank_id, exception_type, severity,

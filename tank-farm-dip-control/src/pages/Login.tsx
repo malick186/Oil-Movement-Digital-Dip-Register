@@ -50,8 +50,9 @@ export default function Login() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Username</label>
+            <label htmlFor="login-username" className="block text-xs text-slate-400 mb-1">Username</label>
             <input
+              id="login-username"
               {...register('username')}
               className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
               placeholder="Enter username"
@@ -63,8 +64,9 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-xs text-slate-400 mb-1">Password</label>
             <input
+              id="login-password"
               type="password"
               {...register('password')}
               className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"

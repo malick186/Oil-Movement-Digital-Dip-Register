@@ -21,6 +21,10 @@ export default function Settings() {
   }, []);
 
   const handleUpdateTolerance = async (id: number, field: string, value: number) => {
+    if (isNaN(value) || value < 0) {
+      setMsg('Please enter a valid non-negative number');
+      return;
+    }
     try {
       await api.updateTolerance(id, { [field]: value });
       setMsg('Tolerance updated');

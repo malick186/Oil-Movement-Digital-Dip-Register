@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { dipEntrySchema, type DipEntryFormData } from '../validation/schemas';
-import type { Tank, Product, Operator, TankStatus } from '../types';
+import type { Tank, Product, Operator, TankStatus, ShiftStatus } from '../types';
 import * as api from '../services/api';
 
 export default function NewDip() {
@@ -10,6 +10,7 @@ export default function NewDip() {
   const [products, setProducts] = useState<Product[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
   const [statuses, setStatuses] = useState<TankStatus[]>([]);
+  const [activeShifts, setActiveShifts] = useState<ShiftStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -20,6 +21,7 @@ export default function NewDip() {
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<DipEntryFormData>({
     resolver: zodResolver(dipEntrySchema),
@@ -35,16 +37,22 @@ export default function NewDip() {
   useEffect(() => {
     (async () => {
       try {
-        const [t, p, o, s] = await Promise.all([
+        const [t, p, o, s, shifts] = await Promise.all([
           api.listActiveTanks(),
           api.listActiveProducts(),
           api.listActiveOperators(),
           api.listTankStatuses(),
+          api.getShiftStatus(),
         ]);
         setTanks(t);
         setProducts(p);
         setOperators(o);
         setStatuses(s);
+        const openShifts = shifts.filter((sh) => !sh.is_closed);
+        setActiveShifts(openShifts);
+        if (openShifts.length > 0) {
+          setValue('shift_id', openShifts[0].shift_id);
+        }
       } catch {
         setErrorMsg('Failed to load reference data');
       } finally {
@@ -66,7 +74,7 @@ export default function NewDip() {
       await api.createDipRecord({
         date: dateStr,
         time: timeStr,
-        shift_id: 1,
+        shift_id: Number(data.shift_id),
         tank_id: Number(data.tank_id),
         product_id: Number(data.product_id),
         gross_dip_mm: Number(data.gross_dip_mm),
@@ -116,6 +124,31 @@ export default function NewDip() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded border border-slate-200 p-4 overflow-auto flex-1">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {activeShifts.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Shift <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register('shift_id', { valueAsNumber: true })}
+                className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              >
+                {activeShifts.map((sh) => (
+                  <option key={sh.shift_id} value={sh.shift_id}>
+                    {sh.shift_name}
+                  </option>
+                ))}
+              </select>
+              {errors.shift_id && (
+                <p className="text-red-500 text-xs mt-1">{errors.shift_id.message}</p>
+              )}
+            </div>
+          )}
+          {activeShifts.length === 0 && (
+            <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2">
+              No active shifts. Please configure shifts in Shift Closing.
+            </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Tank <span className="text-red-500">*</span>
