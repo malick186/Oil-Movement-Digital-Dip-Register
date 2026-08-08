@@ -22,24 +22,24 @@ import Settings from './pages/Settings';
 import BackupRestore from './pages/BackupRestore';
 import AuditLog from './pages/AuditLog';
 
-const pageComponents: Record<string, React.ComponentType> = {
-  dashboard: Dashboard,
-  'new-dip': NewDip,
-  'dip-verification': DipVerification,
-  'shift-closing': ShiftClosing,
-  'tank-status': TankStatus,
-  exceptions: Exceptions,
-  'dip-history': DipHistory,
-  'tank-trends': TankTrends,
-  reports: Reports,
-  'tank-master': TankMaster,
-  'product-master': ProductMaster,
-  'operator-master': OperatorMaster,
-  'tank-status-master': TankStatusMaster,
-  users: Users,
-  settings: Settings,
-  'backup-restore': BackupRestore,
-  'audit-log': AuditLog,
+const pageConfig: Record<string, { component: React.ComponentType; roles: string[] }> = {
+  dashboard: { component: Dashboard, roles: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'] },
+  'new-dip': { component: NewDip, roles: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'] },
+  'dip-verification': { component: DipVerification, roles: ['Shift In-Charge', 'Administrator'] },
+  'shift-closing': { component: ShiftClosing, roles: ['Shift In-Charge', 'Administrator'] },
+  'tank-status': { component: TankStatus, roles: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'] },
+  exceptions: { component: Exceptions, roles: ['Shift In-Charge', 'Administrator'] },
+  'dip-history': { component: DipHistory, roles: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'] },
+  'tank-trends': { component: TankTrends, roles: ['Shift In-Charge', 'Administrator'] },
+  reports: { component: Reports, roles: ['Shift In-Charge', 'Administrator'] },
+  'tank-master': { component: TankMaster, roles: ['Administrator'] },
+  'product-master': { component: ProductMaster, roles: ['Administrator'] },
+  'operator-master': { component: OperatorMaster, roles: ['Administrator'] },
+  'tank-status-master': { component: TankStatusMaster, roles: ['Administrator'] },
+  users: { component: Users, roles: ['Administrator'] },
+  settings: { component: Settings, roles: ['Administrator'] },
+  'backup-restore': { component: BackupRestore, roles: ['Administrator'] },
+  'audit-log': { component: AuditLog, roles: ['Administrator'] },
 };
 
 function App() {
@@ -64,10 +64,11 @@ function App() {
     return <Login />;
   }
 
-  const PageComponent = pageComponents[currentPage] || Dashboard;
+  const config = pageConfig[currentPage] || pageConfig.dashboard;
+  const PageComponent = config.component;
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={config.roles}>
       <MainLayout>
         <PageComponent />
       </MainLayout>

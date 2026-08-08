@@ -2,7 +2,7 @@ use rusqlite::params;
 use std::sync::Mutex;
 use serde::Serialize;
 
-use crate::models::{DipRecheck, DipReview, DipCorrection, CreateDipRequest, UserSession};
+use crate::models::{DipRecheck, DipReview, DipCorrection, CreateDipRequest, DipRecordFilter, UserSession};
 use crate::util::{audit_log, get_current_user_id};
 
 #[derive(Debug, Clone, Serialize)]
@@ -559,6 +559,130 @@ pub fn get_pending_reviews(
     }).map_err(|e| e.to_string())?
     .collect::<Result<Vec<_>, _>>()
     .map_err(|e| e.to_string())?;
+
+    drop(stmt);
+    Ok(records)
+}
+
+#[tauri::command]
+pub fn list_dip_records_with_relations(
+    filters: DipRecordFilter,
+    db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+) -> Result<Vec<DipRecordWithRelations>, String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+
+    let mut sql = String::from(
+        "SELECT dr.id, dr.record_number, dr.date, dr.time, dr.shift_id, dr.tank_id, dr.product_id,
+                dr.reference_point_snapshot, dr.gross_dip_mm, dr.auto_dip_mm, dr.radar_dip_mm,
+                dr.water_dip_mm, dr.sludge_dip_mm, dr.temperature, dr.temperature_unit,
+                dr.density, dr.tank_status_id, dr.custom_tank_status, dr.operator_id,
+                dr.remarks, dr.gross_auto_difference, dr.gross_radar_difference,
+                dr.auto_radar_difference, dr.entered_by, dr.entered_at, dr.review_status,
+                dr.reviewed_by, dr.reviewed_at, dr.approval_status, dr.approved_by,
+                dr.approved_at, dr.record_status,
+                COALESCE(t.tank_no, ''), COALESCE(p.name, ''),
+                COALESCE(ts.name, ''), COALESCE(op.name, ''),
+                COALESCE(u.full_name, ''), COALESCE(t.location, '')
+         FROM dip_records dr
+         LEFT JOIN tanks t ON dr.tank_id = t.id
+         LEFT JOIN products p ON dr.product_id = p.id
+         LEFT JOIN tank_statuses ts ON dr.tank_status_id = ts.id
+         LEFT JOIN operators op ON dr.operator_id = op.id
+         LEFT JOIN users u ON dr.entered_by = u.id
+         WHERE 1=1",
+    );
+    let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+
+    if let Some(ref date_from) = filters.date_from {
+        sql.push_str(&format!(" AND dr.date >= ?{}", param_values.len() + 1));
+        param_values.push(Box::new(date_from.clone()));
+    }
+    if let Some(ref date_to) = filters.date_to {
+        sql.push_str(&format!(" AND dr.date <= ?{}", param_values.len() + 1));
+        param_values.push(Box::new(date_to.clone()));
+    }
+    if let Some(tank_id) = filters.tank_id {
+        sql.push_str(&format!(" AND dr.tank_id = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(tank_id));
+    }
+    if let Some(ref review_status) = filters.review_status {
+        sql.push_str(&format!(" AND dr.review_status = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(review_status.clone()));
+    }
+    if let Some(ref approval_status) = filters.approval_status {
+        sql.push_str(&format!(" AND dr.approval_status = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(approval_status.clone()));
+    }
+    if let Some(ref record_status) = filters.record_status {
+        sql.push_str(&format!(" AND dr.record_status = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(record_status.clone()));
+    }
+    if let Some(operator_id) = filters.operator_id {
+        sql.push_str(&format!(" AND dr.operator_id = ?{}", param_values.len() + 1));
+        param_values.push(Box::new(operator_id));
+    }
+
+    sql.push_str(" ORDER BY dr.date DESC, dr.time DESC");
+
+    let limit = filters.limit.unwrap_or(100);
+    let offset = filters.offset.unwrap_or(0);
+    sql.push_str(&format!(
+        " LIMIT {} OFFSET {}",
+        param_values.len() + 1,
+        param_values.len() + 2
+    ));
+    param_values.push(Box::new(limit));
+    param_values.push(Box::new(offset));
+
+    let param_refs: Vec<&dyn rusqlite::types::ToSql> = param_values.iter().map(|p| p.as_ref()).collect();
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let records = stmt
+        .query_map(param_refs.as_slice(), |row| {
+            Ok(DipRecordWithRelations {
+                id: row.get(0)?,
+                record_number: row.get(1)?,
+                date: row.get(2)?,
+                time: row.get(3)?,
+                shift_id: row.get(4)?,
+                tank_id: row.get(5)?,
+                product_id: row.get(6)?,
+                reference_point_snapshot: row.get(7)?,
+                gross_dip_mm: row.get(8)?,
+                auto_dip_mm: row.get(9)?,
+                radar_dip_mm: row.get(10)?,
+                water_dip_mm: row.get(11)?,
+                sludge_dip_mm: row.get(12)?,
+                temperature: row.get(13)?,
+                temperature_unit: row.get(14)?,
+                density: row.get(15)?,
+                tank_status_id: row.get(16)?,
+                custom_tank_status: row.get(17)?,
+                operator_id: row.get(18)?,
+                remarks: row.get(19)?,
+                gross_auto_difference: row.get(20)?,
+                gross_radar_difference: row.get(21)?,
+                auto_radar_difference: row.get(22)?,
+                entered_by: row.get(23)?,
+                entered_at: row.get(24)?,
+                review_status: row.get(25)?,
+                reviewed_by: row.get(26)?,
+                reviewed_at: row.get(27)?,
+                approval_status: row.get(28)?,
+                approved_by: row.get(29)?,
+                approved_at: row.get(30)?,
+                record_status: row.get(31)?,
+                tank_no: row.get(32)?,
+                product_name: row.get(33)?,
+                tank_status_name: row.get(34)?,
+                operator_name: row.get(35)?,
+                entered_by_name: row.get(36)?,
+                location: row.get(37)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
 
     drop(stmt);
     Ok(records)

@@ -25,8 +25,8 @@ export default function TankStatusMaster() {
 
   const onSubmit = async (data: TankStatusFormData) => {
     try {
-      if (editingId) { await api.updateTankStatus(editingId, data); setMsg('Status updated'); }
-      else { await api.createTankStatus(data); setMsg('Status created'); }
+      if (editingId) { await api.updateTankStatus(editingId, data.name, data.display_order, data.allow_custom ? 1 : 0); setMsg('Status updated'); }
+      else { await api.createTankStatus(data.name, data.display_order, data.allow_custom ? 1 : 0); setMsg('Status created'); }
       setShowForm(false); setEditingId(null); reset(); load();
     } catch (err) { setMsg(err instanceof Error ? err.message : 'Operation failed'); }
   };

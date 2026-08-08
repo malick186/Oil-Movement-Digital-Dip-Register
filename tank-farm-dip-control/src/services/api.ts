@@ -104,11 +104,15 @@ export async function listDipRecords(filters?: {
   limit?: number;
   offset?: number;
 }): Promise<DipRecordWithRelations[]> {
-  return invoke('list_dip_records', { filters });
+  return invoke('list_dip_records_with_relations', { filters });
 }
 
 export async function requestCorrection(id: number, fields: { field_name: string; old_value?: string; new_value: string }[], reason?: string): Promise<DipRecord> {
   return invoke('request_correction', { id, fields, reason });
+}
+
+export async function checkDuplicateDip(tankId: number, date: string, time: string, shiftId: number): Promise<string> {
+  return invoke('check_duplicate_dip', { tankId, date, time, shiftId });
 }
 
 // ── Verification ──
@@ -144,7 +148,7 @@ export async function updateTank(id: number, data: Partial<Tank>): Promise<Tank>
 }
 
 export async function deleteTank(id: number): Promise<void> {
-  return invoke('delete_tank', { id });
+  return invoke('deactivate_tank', { id });
 }
 
 export async function getTank(id: number): Promise<Tank> {
@@ -171,7 +175,7 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
 }
 
 export async function deleteProduct(id: number): Promise<void> {
-  return invoke('delete_product', { id });
+  return invoke('deactivate_product', { id });
 }
 
 export async function getProduct(id: number): Promise<Product> {
@@ -198,7 +202,7 @@ export async function updateOperator(id: number, data: Partial<Operator>): Promi
 }
 
 export async function deleteOperator(id: number): Promise<void> {
-  return invoke('delete_operator', { id });
+  return invoke('deactivate_operator', { id });
 }
 
 export async function getOperator(id: number): Promise<Operator> {
@@ -216,16 +220,16 @@ export async function listActiveOperators(): Promise<Operator[]> {
 
 // ── Tank Status Master ──
 
-export async function createTankStatus(data: Partial<TankStatus>): Promise<TankStatus> {
-  return invoke('create_tank_status', { data });
+export async function createTankStatus(name: string, displayOrder: number, allowCustom: number): Promise<TankStatus> {
+  return invoke('create_tank_status', { name, displayOrder, allowCustom });
 }
 
-export async function updateTankStatus(id: number, data: Partial<TankStatus>): Promise<TankStatus> {
-  return invoke('update_tank_status', { id, data });
+export async function updateTankStatus(id: number, name: string, displayOrder: number, allowCustom: number): Promise<TankStatus> {
+  return invoke('update_tank_status', { id, name, displayOrder, allowCustom });
 }
 
 export async function deleteTankStatus(id: number): Promise<void> {
-  return invoke('delete_tank_status', { id });
+  return invoke('deactivate_tank_status', { id });
 }
 
 export async function getTankStatus(id: number): Promise<TankStatus> {
@@ -238,12 +242,12 @@ export async function listTankStatuses(): Promise<TankStatus[]> {
 
 // ── Shift Closing ──
 
-export async function getShiftStatus(): Promise<ShiftStatus> {
+export async function getShiftStatus(): Promise<ShiftStatus[]> {
   return invoke('get_shift_status');
 }
 
-export async function closeShift(remarks?: string): Promise<ShiftClosing> {
-  return invoke('close_shift', { remarks });
+export async function closeShift(shiftId: number, remarks?: string): Promise<ShiftClosing> {
+  return invoke('close_shift', { shiftId, remarks });
 }
 
 export async function getShiftClosingHistory(): Promise<ShiftClosing[]> {

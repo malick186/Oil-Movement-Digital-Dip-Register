@@ -174,8 +174,11 @@ export interface Exception {
 export interface ShiftStatus {
   shift_id: number;
   shift_name: string;
-  is_open: boolean;
-  open_time: string | null;
+  total_dips: number;
+  pending_review: number;
+  pending_approval: number;
+  exceptions: number;
+  is_closed: boolean;
 }
 
 export interface AttentionItem {
@@ -199,6 +202,7 @@ export type Page =
   | 'dip-verification'
   | 'shift-closing'
   | 'tank-status'
+  | 'tank-detail'
   | 'exceptions'
   | 'dip-history'
   | 'tank-trends'

@@ -16,7 +16,7 @@ pub fn create_backup(
         let sess = current_session.lock().map_err(|e| e.to_string())?;
         sess.as_ref().map(|s| s.role.clone()).unwrap_or_default()
     };
-    if user_role != "admin" {
+    if user_role != "Administrator" {
         return Err("Only admin can create backups".to_string());
     }
 
@@ -70,7 +70,7 @@ pub fn restore_backup(
         let sess = current_session.lock().map_err(|e| e.to_string())?;
         sess.as_ref().map(|s| s.role.clone()).unwrap_or_default()
     };
-    if user_role != "admin" {
+    if user_role != "Administrator" {
         return Err("Only admin can restore backups".to_string());
     }
 

@@ -4,21 +4,22 @@ import type { ShiftClosing, ShiftStatus } from '../types';
 import { CalendarCheck } from 'lucide-react';
 
 export default function ShiftClosing() {
-  const [shiftStatus, setShiftStatus] = useState<ShiftStatus | null>(null);
+  const [shiftStatuses, setShiftStatuses] = useState<ShiftStatus[]>([]);
   const [history, setHistory] = useState<ShiftClosing[]>([]);
   const [closing, setClosing] = useState(false);
   const [remarks, setRemarks] = useState('');
+  const [closingShiftId, setClosingShiftId] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [status, hist] = await Promise.all([
+      const [statuses, hist] = await Promise.all([
         api.getShiftStatus(),
         api.getShiftClosingHistory(),
       ]);
-      setShiftStatus(status);
+      setShiftStatuses(statuses);
       setHistory(hist);
     } catch {
       setMsg('Failed to load shift data');
@@ -31,11 +32,12 @@ export default function ShiftClosing() {
     loadData();
   }, []);
 
-  const handleCloseShift = async () => {
+  const handleCloseShift = async (shiftId: number) => {
     setClosing(true);
     setMsg(null);
+    setClosingShiftId(shiftId);
     try {
-      await api.closeShift(remarks);
+      await api.closeShift(shiftId, remarks);
       setMsg('Shift closed successfully');
       setRemarks('');
       loadData();
@@ -43,6 +45,7 @@ export default function ShiftClosing() {
       setMsg(err instanceof Error ? err.message : 'Failed to close shift');
     } finally {
       setClosing(false);
+      setClosingShiftId(null);
     }
   };
 
@@ -66,37 +69,49 @@ export default function ShiftClosing() {
         </div>
       )}
 
-      {shiftStatus && (
-        <div className="bg-white rounded border border-slate-200 p-4 mb-4">
-          <div className="flex items-center gap-3">
-            <CalendarCheck size={24} className={shiftStatus.is_open ? 'text-green-500' : 'text-slate-400'} />
-            <div>
-              <div className="text-sm font-medium text-slate-700">{shiftStatus.shift_name}</div>
-              <div className="text-xs text-slate-500">
-                Status: {shiftStatus.is_open ? 'Open' : 'Closed'}
-                {shiftStatus.open_time && ` | Since: ${shiftStatus.open_time}`}
+      {shiftStatuses.length === 0 ? (
+        <div className="text-xs text-slate-400">No active shifts configured</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          {shiftStatuses.map((status) => (
+            <div key={status.shift_id} className="bg-white rounded border border-slate-200 p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <CalendarCheck size={24} className={status.is_closed ? 'text-slate-400' : 'text-green-500'} />
+                <div>
+                  <div className="text-sm font-medium text-slate-700">{status.shift_name}</div>
+                  <div className="text-xs text-slate-500">
+                    Status: {status.is_closed ? 'Closed' : 'Open'}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {shiftStatus.is_open && (
-            <div className="mt-4 border-t border-slate-100 pt-3">
-              <textarea
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
-                rows={2}
-                placeholder="Closing remarks..."
-              />
-              <button
-                onClick={handleCloseShift}
-                disabled={closing}
-                className="mt-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
-              >
-                {closing ? 'Closing...' : 'Close Shift'}
-              </button>
+              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                <div className="text-slate-500">Total Dips: <span className="font-mono text-slate-700">{status.total_dips}</span></div>
+                <div className="text-slate-500">Pending Review: <span className="font-mono text-slate-700">{status.pending_review}</span></div>
+                <div className="text-slate-500">Pending Approval: <span className="font-mono text-slate-700">{status.pending_approval}</span></div>
+                <div className="text-slate-500">Exceptions: <span className="font-mono text-slate-700">{status.exceptions}</span></div>
+              </div>
+
+              {!status.is_closed && (
+                <div className="border-t border-slate-100 pt-3">
+                  <textarea
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
+                    rows={2}
+                    placeholder="Closing remarks..."
+                  />
+                  <button
+                    onClick={() => handleCloseShift(status.shift_id)}
+                    disabled={closing}
+                    className="mt-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+                  >
+                    {closing && closingShiftId === status.shift_id ? 'Closing...' : 'Close Shift'}
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       )}
 

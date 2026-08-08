@@ -330,6 +330,32 @@ pub fn get_dip_record(
 }
 
 #[tauri::command]
+pub fn check_duplicate_dip(
+    tank_id: i64,
+    date: String,
+    time: String,
+    shift_id: i64,
+    db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+) -> Result<String, String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM dip_records WHERE tank_id = ?1 AND date = ?2 AND time = ?3 AND shift_id = ?4",
+            params![tank_id, date, time, shift_id],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    if count > 0 {
+        Ok(format!(
+            "A dip record for this tank on {} at {} already exists. This may be a duplicate.",
+            date, time
+        ))
+    } else {
+        Ok(String::new())
+    }
+}
+
+#[tauri::command]
 pub fn list_dip_records(
     filters: DipRecordFilter,
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
@@ -427,7 +453,7 @@ pub fn request_correction(
         conn.execute(
             "INSERT INTO dip_corrections (dip_record_id, field_name, old_value, new_value, reason, requested_by, status)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'pending')",
-            params![id, field.field_name, field.old_value, field.new_value, reason],
+            params![id, field.field_name, field.old_value, field.new_value, reason, user_id],
         )
         .map_err(|e| format!("Failed to create correction: {}", e))?;
         last_corr_id = conn.last_insert_rowid();
@@ -535,4 +561,28 @@ fn check_single_tolerance(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calc_diff_basic() {
+        assert_eq!(calc_diff(Some(100.0), Some(98.0)), Some(2.0));
+        assert_eq!(calc_diff(Some(98.0), Some(100.0)), Some(-2.0));
+    }
+
+    #[test]
+    fn test_calc_diff_with_none() {
+        assert_eq!(calc_diff(None, Some(100.0)), None);
+        assert_eq!(calc_diff(Some(100.0), None), None);
+        assert_eq!(calc_diff(None, None), None);
+    }
+
+    #[test]
+    fn test_calc_diff_rounding() {
+        let result = calc_diff(Some(100.12345), Some(100.0));
+        assert!((result.unwrap() - 0.123).abs() < 0.001);
+    }
 }

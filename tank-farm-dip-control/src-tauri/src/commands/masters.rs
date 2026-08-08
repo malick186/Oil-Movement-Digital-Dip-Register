@@ -600,3 +600,90 @@ pub fn create_tank_status(
     )
     .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn update_tank_status(
+    id: i64,
+    name: String,
+    display_order: i64,
+    allow_custom: i64,
+    db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+) -> Result<TankStatus, String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE tank_statuses SET name=?1, display_order=?2, allow_custom=?3 WHERE id=?4",
+        params![name, display_order, allow_custom, id],
+    )
+    .map_err(|e| format!("Failed to update tank status: {}", e))?;
+
+    conn.query_row(
+        "SELECT id, name, display_order, active, allow_custom FROM tank_statuses WHERE id = ?1",
+        params![id],
+        |row| {
+            Ok(TankStatus {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                display_order: row.get(2)?,
+                active: row.get(3)?,
+                allow_custom: row.get(4)?,
+            })
+        },
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn deactivate_tank_status(
+    id: i64,
+    db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+) -> Result<(), String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE tank_statuses SET active = 0 WHERE id = ?1",
+        params![id],
+    )
+    .map_err(|e| format!("Failed to deactivate tank status: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn deactivate_tank(
+    id: i64,
+    db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+) -> Result<(), String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE tanks SET active = 0 WHERE id = ?1",
+        params![id],
+    )
+    .map_err(|e| format!("Failed to deactivate tank: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn deactivate_product(
+    id: i64,
+    db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+) -> Result<(), String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE products SET active = 0 WHERE id = ?1",
+        params![id],
+    )
+    .map_err(|e| format!("Failed to deactivate product: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn deactivate_operator(
+    id: i64,
+    db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+) -> Result<(), String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE operators SET active = 0 WHERE id = ?1",
+        params![id],
+    )
+    .map_err(|e| format!("Failed to deactivate operator: {}", e))?;
+    Ok(())
+}

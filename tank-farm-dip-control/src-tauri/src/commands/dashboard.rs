@@ -26,6 +26,14 @@ pub fn get_attention_list(
 ) -> Result<Vec<AttentionItem>, String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
 
+    let max_attention: f64 = conn
+        .query_row(
+            "SELECT COALESCE(MIN(attention_limit), 5.0) FROM tolerance_settings",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(5.0);
+
     let mut stmt = conn.prepare(
         "SELECT dr.id, dr.record_number, COALESCE(t.tank_no, ''), COALESCE(p.name, ''),
                 dr.gross_dip_mm, dr.auto_dip_mm, dr.radar_dip_mm,
@@ -37,13 +45,13 @@ pub fn get_attention_list(
          LEFT JOIN products p ON dr.product_id = p.id
          LEFT JOIN tank_statuses ts ON dr.tank_status_id = ts.id
          WHERE dr.record_status IN ('submitted', 'in_review')
-            OR ABS(COALESCE(dr.gross_auto_difference, 0)) > 5
-            OR ABS(COALESCE(dr.gross_radar_difference, 0)) > 5
+            OR ABS(COALESCE(dr.gross_auto_difference, 0)) > ?1
+            OR ABS(COALESCE(dr.gross_radar_difference, 0)) > ?1
          ORDER BY dr.date DESC, dr.time DESC
          LIMIT 20"
     ).map_err(|e| e.to_string())?;
 
-    let items = stmt.query_map([], |row| {
+    let items = stmt.query_map(params![max_attention], |row| {
         Ok(AttentionItem {
             dip_id: row.get(0)?,
             record_number: row.get(1)?,
@@ -110,10 +118,18 @@ pub fn get_dashboard_stats(
         )
         .unwrap_or(0);
 
+    let max_tolerance: f64 = conn
+        .query_row(
+            "SELECT COALESCE(MIN(normal_limit), 10.0) FROM tolerance_settings",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(10.0);
+
     let abnormal_diff: i64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE (gross_auto_difference IS NOT NULL AND ABS(gross_auto_difference) > 10) OR (gross_radar_difference IS NOT NULL AND ABS(gross_radar_difference) > 10) OR (auto_radar_difference IS NOT NULL AND ABS(auto_radar_difference) > 10)",
-            [],
+            "SELECT COUNT(*) FROM dip_records WHERE (gross_auto_difference IS NOT NULL AND ABS(gross_auto_difference) > ?1) OR (gross_radar_difference IS NOT NULL AND ABS(gross_radar_difference) > ?1) OR (auto_radar_difference IS NOT NULL AND ABS(auto_radar_difference) > ?1)",
+            params![max_tolerance],
             |row| row.get(0),
         )
         .unwrap_or(0);

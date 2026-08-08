@@ -2,20 +2,22 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '../store/appStore';
 import * as api from '../services/api';
 import type { AttentionItem } from '../types';
+import TankDetail from './TankDetail';
 import { Activity, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 
-function getSeverity(item: AttentionItem): 'recheck' | 'attention' | 'normal' {
+function getSeverity(item: AttentionItem, maxAttention: number): 'recheck' | 'attention' | 'normal' {
   const ga = Math.abs(item.gross_auto_difference ?? 0);
   const gr = Math.abs(item.gross_radar_difference ?? 0);
   const max = Math.max(ga, gr);
   if (max > 10) return 'recheck';
-  if (max > 5) return 'attention';
+  if (max > maxAttention) return 'attention';
   return 'normal';
 }
 
 export default function TankStatus() {
   const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTankId, setSelectedTankId] = useState<number | null>(null);
   const dashboardStats = useAppStore((s) => s.dashboardStats);
 
   useEffect(() => {
@@ -24,12 +26,15 @@ export default function TankStatus() {
         const items = await api.getAttentionList();
         setAttentionItems(items);
       } catch {
-        // silently fail
       } finally {
         setLoading(false);
       }
     })();
   }, []);
+
+  if (selectedTankId !== null) {
+    return <TankDetail tankId={selectedTankId} onBack={() => setSelectedTankId(null)} />;
+  }
 
   if (loading) {
     return (
@@ -73,9 +78,13 @@ export default function TankStatus() {
               </tr>
             ) : (
               attentionItems.map((item, idx) => {
-                  const sev = getSeverity(item);
+                  const sev = getSeverity(item, 5);
                   return (
-                <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr
+                  key={idx}
+                  className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
+                  onClick={() => setSelectedTankId(item.dip_id)}
+                >
                   <td className="px-3 py-2 font-medium text-slate-700">{item.tank_no}</td>
                   <td className="px-3 py-2 text-slate-500">{item.product_name}</td>
                   <td className="px-3 py-2 text-right font-mono text-slate-700">{item.gross_dip_mm?.toFixed(1) ?? '--'}</td>
