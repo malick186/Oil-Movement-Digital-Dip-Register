@@ -1,16 +1,16 @@
 use rusqlite::Connection;
 use std::path::PathBuf;
-use tauri::Manager;
 
 const SCHEMA_VERSION: i64 = 1;
 
-pub fn get_db_path(app_handle: &tauri::AppHandle) -> PathBuf {
-    let app_dir = app_handle
-        .path()
-        .app_data_dir()
-        .expect("failed to resolve app data dir");
-    std::fs::create_dir_all(&app_dir).expect("failed to create app data dir");
-    app_dir.join("tank_farm_dip.db")
+pub fn get_db_path(_app_handle: &tauri::AppHandle) -> PathBuf {
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."));
+    let data_dir = exe_dir.join("data");
+    std::fs::create_dir_all(&data_dir).expect("failed to create data dir");
+    data_dir.join("tank_farm_dip.db")
 }
 
 pub fn init_db(app_handle: &tauri::AppHandle) -> Result<Connection, String> {
