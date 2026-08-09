@@ -2,7 +2,21 @@ use rusqlite::params;
 use std::sync::Mutex;
 
 use crate::models::{CreateUserRequest, User, UserSession};
-use crate::util::{audit_log, get_current_user_id};
+use crate::util::{audit_log, require_roles};
+
+const ALLOWED_ROLES: &[&str] = &["Shift Supervisor", "Shift In-Charge", "Administrator"];
+
+fn public_user(row: &rusqlite::Row) -> rusqlite::Result<User> {
+    Ok(User {
+        id: row.get(0)?,
+        username: row.get(1)?,
+        password_hash: "[REDACTED]".to_string(),
+        full_name: row.get(3)?,
+        role: row.get(4)?,
+        active: row.get(5)?,
+        created_at: row.get(6)?,
+    })
+}
 
 #[tauri::command]
 pub fn login(
@@ -11,42 +25,35 @@ pub fn login(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<UserSession, String> {
-    let conn = db.lock().map_err(|e| e.to_string())?;
+    let username = username.trim();
+    if username.is_empty() || password.is_empty() {
+        return Err("Invalid username or password".to_string());
+    }
 
-    let user = conn
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    let (id, stored_username, password_hash, full_name, role): (i64, String, String, String, String) = conn
         .query_row(
-            "SELECT id, username, password_hash, full_name, role, active, created_at FROM users WHERE username = ?1 AND active = 1",
+            "SELECT id, username, password_hash, full_name, role FROM users WHERE username=?1 AND active=1",
             params![username],
-            |row| {
-                Ok(User {
-                    id: row.get(0)?,
-                    username: row.get(1)?,
-                    password_hash: row.get(2)?,
-                    full_name: row.get(3)?,
-                    role: row.get(4)?,
-                    active: row.get(5)?,
-                    created_at: row.get(6)?,
-                })
-            },
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
         )
         .map_err(|_| "Invalid username or password".to_string())?;
 
-    bcrypt::verify(&password, &user.password_hash)
-        .map_err(|_| "Invalid username or password".to_string())?
-        .then_some(())
-        .ok_or("Invalid username or password".to_string())?;
+    if !bcrypt::verify(&password, &password_hash).unwrap_or(false) {
+        return Err("Invalid username or password".to_string());
+    }
 
     let session = UserSession {
-        user_id: user.id,
-        username: user.username.clone(),
-        full_name: user.full_name.clone(),
-        role: user.role.clone(),
+        user_id: id,
+        username: stored_username,
+        full_name,
+        role,
     };
 
     audit_log(
         &conn,
-        user.id,
-        &user.role,
+        session.user_id,
+        &session.role,
         "login",
         None,
         None,
@@ -56,9 +63,8 @@ pub fn login(
         Some("User logged in"),
     );
 
-    let mut sess = current_session.lock().map_err(|e| e.to_string())?;
-    *sess = Some(session.clone());
-
+    let mut state = current_session.lock().map_err(|e| e.to_string())?;
+    *state = Some(session.clone());
     Ok(session)
 }
 
@@ -67,13 +73,13 @@ pub fn logout(
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
 ) -> Result<(), String> {
-    let mut sess = current_session.lock().map_err(|e| e.to_string())?;
-    if let Some(ref s) = *sess {
+    let mut state = current_session.lock().map_err(|e| e.to_string())?;
+    if let Some(ref session) = *state {
         let conn = db.lock().map_err(|e| e.to_string())?;
         audit_log(
             &conn,
-            s.user_id,
-            &s.role,
+            session.user_id,
+            &session.role,
             "logout",
             None,
             None,
@@ -83,7 +89,7 @@ pub fn logout(
             Some("User logged out"),
         );
     }
-    *sess = None;
+    *state = None;
     Ok(())
 }
 
@@ -91,8 +97,8 @@ pub fn logout(
 pub fn get_current_user(
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Option<UserSession>, String> {
-    let sess = current_session.lock().map_err(|e| e.to_string())?;
-    Ok(sess.clone())
+    let state = current_session.lock().map_err(|e| e.to_string())?;
+    Ok(state.clone())
 }
 
 #[tauri::command]
@@ -101,90 +107,67 @@ pub fn create_user(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<User, String> {
-    let conn = db.lock().map_err(|e| e.to_string())?;
-    let user_id = get_current_user_id(&current_session)?;
-
-    let user_role = {
-        let sess = current_session.lock().map_err(|e| e.to_string())?;
-        sess.as_ref()
-            .map(|s| s.role.clone())
-            .unwrap_or_default()
-    };
-    if user_role != "Administrator" {
-        return Err("Only Administrator can create users".to_string());
+    let actor = require_roles(&current_session, &["Administrator"])?;
+    let username = data.username.trim().to_string();
+    let full_name = data.full_name.trim().to_string();
+    if username.is_empty() || full_name.is_empty() {
+        return Err("Username and Full Name are required".to_string());
+    }
+    if data.password.len() < 8 {
+        return Err("Password must be at least 8 characters".to_string());
+    }
+    if !ALLOWED_ROLES.contains(&data.role.as_str()) {
+        return Err("Invalid application role".to_string());
     }
 
     let password_hash = bcrypt::hash(&data.password, bcrypt::DEFAULT_COST)
-        .map_err(|e| format!("Failed to hash password: {}", e))?;
-
+        .map_err(|e| format!("Failed to secure password: {}", e))?;
+    let conn = db.lock().map_err(|e| e.to_string())?;
     conn.execute(
-        "INSERT INTO users (username, password_hash, full_name, role) VALUES (?1, ?2, ?3, ?4)",
-        params![data.username, password_hash, data.full_name, data.role],
+        "INSERT INTO users (username,password_hash,full_name,role,active) VALUES (?1,?2,?3,?4,1)",
+        params![username, password_hash, full_name, data.role],
     )
     .map_err(|e| format!("Failed to create user: {}", e))?;
-
     let id = conn.last_insert_rowid();
 
     let user = conn
         .query_row(
-            "SELECT id, username, password_hash, full_name, role, active, created_at FROM users WHERE id = ?1",
+            "SELECT id,username,password_hash,full_name,role,active,created_at FROM users WHERE id=?1",
             params![id],
-            |row| {
-                Ok(User {
-                    id: row.get(0)?,
-                    username: row.get(1)?,
-                    password_hash: row.get(2)?,
-                    full_name: row.get(3)?,
-                    role: row.get(4)?,
-                    active: row.get(5)?,
-                    created_at: row.get(6)?,
-                })
-            },
+            public_user,
         )
-        .map_err(|e| format!("Failed to fetch created user: {}", e))?;
+        .map_err(|e| e.to_string())?;
 
     audit_log(
         &conn,
-        user_id,
-        &user_role,
+        actor.user_id,
+        &actor.role,
         "create_user",
         None,
         None,
         None,
-        Some(&format!("Created user: {}", user.username)),
+        Some(&format!("{} / {}", user.username, user.role)),
         None,
-        Some("User account created"),
+        Some("Application user created"),
     );
-
     Ok(user)
 }
 
 #[tauri::command]
 pub fn list_users(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+    current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Vec<User>, String> {
+    let _actor = require_roles(&current_session, &["Administrator"])?;
     let conn = db.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, username, password_hash, full_name, role, active, created_at FROM users ORDER BY id")
+        .prepare("SELECT id,username,password_hash,full_name,role,active,created_at FROM users ORDER BY full_name,username")
         .map_err(|e| e.to_string())?;
-
     let users = stmt
-        .query_map([], |row| {
-            Ok(User {
-                id: row.get(0)?,
-                username: row.get(1)?,
-                password_hash: "[REDACTED]".to_string(),
-                full_name: row.get(3)?,
-                role: row.get(4)?,
-                active: row.get(5)?,
-                created_at: row.get(6)?,
-            })
-        })
+        .query_map([], public_user)
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
-
-    drop(stmt);
     Ok(users)
 }
 
@@ -194,65 +177,56 @@ pub fn toggle_user_active(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<User, String> {
-    let conn = db.lock().map_err(|e| e.to_string())?;
-    let actor_id = get_current_user_id(&current_session)?;
-
-    let actor_role = {
-        let sess = current_session.lock().map_err(|e| e.to_string())?;
-        sess.as_ref()
-            .map(|s| s.role.clone())
-            .unwrap_or_default()
-    };
-    if actor_role != "Administrator" {
-        return Err("Only Administrator can toggle user active status".to_string());
+    let actor = require_roles(&current_session, &["Administrator"])?;
+    if actor.user_id == user_id {
+        return Err("You cannot deactivate your own active Administrator session".to_string());
     }
 
-    let current_active: i64 = conn
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    let (current_active, target_role): (i64, String) = conn
         .query_row(
-            "SELECT active FROM users WHERE id = ?1",
+            "SELECT active,role FROM users WHERE id=?1",
             params![user_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
-        .map_err(|e| format!("User not found: {}", e))?;
+        .map_err(|_| "User not found".to_string())?;
+
+    if current_active == 1 && target_role == "Administrator" {
+        let active_admins: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM users WHERE role='Administrator' AND active=1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+        if active_admins <= 1 {
+            return Err("At least one active Administrator must remain".to_string());
+        }
+    }
 
     let new_active = if current_active == 1 { 0 } else { 1 };
-
-    conn.execute(
-        "UPDATE users SET active = ?1 WHERE id = ?2",
-        params![new_active, user_id],
-    )
-    .map_err(|e| format!("Failed to update user: {}", e))?;
+    conn.execute("UPDATE users SET active=?1 WHERE id=?2", params![new_active, user_id])
+        .map_err(|e| format!("Failed to update user: {}", e))?;
 
     let user = conn
         .query_row(
-            "SELECT id, username, password_hash, full_name, role, active, created_at FROM users WHERE id = ?1",
+            "SELECT id,username,password_hash,full_name,role,active,created_at FROM users WHERE id=?1",
             params![user_id],
-            |row| {
-                Ok(User {
-                    id: row.get(0)?,
-                    username: row.get(1)?,
-                    password_hash: "[REDACTED]".to_string(),
-                    full_name: row.get(3)?,
-                    role: row.get(4)?,
-                    active: row.get(5)?,
-                    created_at: row.get(6)?,
-                })
-            },
+            public_user,
         )
         .map_err(|e| e.to_string())?;
 
     audit_log(
         &conn,
-        actor_id,
-        &actor_role,
+        actor.user_id,
+        &actor.role,
         "toggle_user_active",
         None,
         None,
         Some(&current_active.to_string()),
         Some(&new_active.to_string()),
         None,
-        Some(&format!("Toggled user {} active status", user.username)),
+        Some(&format!("User {} active status changed", user.username)),
     );
-
     Ok(user)
 }
