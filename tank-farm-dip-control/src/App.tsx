@@ -3,6 +3,7 @@ import { useAuthStore } from './store/authStore';
 import { useAppStore } from './store/appStore';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import PageTransition from './components/PageTransition';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import NewDip from './pages/NewDip';
@@ -73,7 +74,9 @@ function App() {
   return (
     <ProtectedRoute allowedRoles={config.roles}>
       <MainLayout>
-        <PageComponent />
+        <PageTransition page={currentPage}>
+          <PageComponent />
+        </PageTransition>
       </MainLayout>
     </ProtectedRoute>
   );

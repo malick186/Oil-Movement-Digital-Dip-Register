@@ -148,7 +148,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <nav className="flex-1 flex flex-col gap-0.5 py-3 overflow-y-auto content-scroll">
+        <nav className="flex-1 flex flex-col gap-0.5 py-3 overflow-y-auto content-scroll nav-3d">
           {navSections.map((section) => (
             <div key={section.heading} className="mb-1">
               {!isCollapsed && (
@@ -163,9 +163,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                     onClick={() => setPage(item.page)}
                     data-active={currentPage === item.page ? 'true' : 'false'}
                     title={item.label}
-                    className={`flex items-center justify-center h-10 rounded-lg mx-1 transition-colors duration-150 w-[calc(100%-8px)] ${
+                    className={`nav-btn-3d flex items-center justify-center h-10 rounded-lg mx-1 w-[calc(100%-8px)] ${
                       currentPage === item.page
-                        ? 'bg-dragon-primary/10 text-dragon-primary'
+                        ? 'active bg-dragon-primary/10 text-dragon-primary'
                         : 'text-dragon-text-secondary hover:bg-dragon-accent/60 hover:text-dragon-text'
                     }`}
                   >
@@ -176,9 +176,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                     key={item.page}
                     onClick={() => setPage(item.page)}
                     data-active={currentPage === item.page ? 'true' : 'false'}
-                    className={`flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium rounded-lg mx-1.5 transition-colors duration-150 w-[calc(100%-12px)] ${
+                    className={`nav-btn-3d flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium rounded-lg mx-1.5 w-[calc(100%-12px)] ${
                       currentPage === item.page
-                        ? 'bg-dragon-primary/10 text-dragon-primary'
+                        ? 'active bg-dragon-primary/10 text-dragon-primary'
                         : 'text-dragon-text-secondary hover:bg-dragon-accent/60 hover:text-dragon-text'
                     }`}
                   >
@@ -254,9 +254,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
         <main className="flex-1 overflow-y-auto content-scroll">
           <div className="p-6 max-w-[1800px] mx-auto">
-            <div className="anim-fade-up">
-              {children}
-            </div>
+            {children}
           </div>
         </main>
       </div>

@@ -106,7 +106,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {cards.map((card) => (
-          <div key={card.label} className="glass-stat">
+           <div key={card.label} className="glass-stat stat-3d">
             <div className="flex items-center gap-2.5 mb-2">
               <div className={`w-9 h-9 rounded-lg ${card.bg} flex items-center justify-center`}>
                 <card.icon size={18} className={card.color} />
