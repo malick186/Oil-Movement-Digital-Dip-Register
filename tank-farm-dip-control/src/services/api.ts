@@ -6,6 +6,8 @@ import type {
   AttentionItem,
   DipRecord,
   DipRecordWithRelations,
+  DipCorrection,
+  DipRecheck,
   Tank,
   Product,
   Operator,
@@ -15,9 +17,43 @@ import type {
   ShiftStatus,
   ToleranceSetting,
   Exception,
+  BackupInfo,
 } from '../types';
 
-// ── Auth ──
+export interface CreateDipPayload {
+  date: string;
+  time: string;
+  shift_id: number;
+  tank_id: number;
+  product_id: number;
+  reference_point_snapshot?: string | null;
+  gross_dip_mm: number;
+  auto_dip_mm?: number | null;
+  radar_dip_mm?: number | null;
+  water_dip_mm: number;
+  sludge_dip_mm: number;
+  temperature: number;
+  temperature_unit: 'C' | 'F';
+  density: number;
+  tank_status_id: number;
+  custom_tank_status?: string;
+  operator_id: number;
+  remarks?: string;
+}
+
+// ── Bootstrap / Auth ──
+
+export async function isBootstrapRequired(): Promise<boolean> {
+  return invoke('is_bootstrap_required');
+}
+
+export async function bootstrapAdmin(data: {
+  username: string;
+  fullName: string;
+  password: string;
+}): Promise<UserSession> {
+  return invoke('bootstrap_admin', data);
+}
 
 export async function login(username: string, password: string): Promise<UserSession> {
   return invoke('login', { username, password });
@@ -27,7 +63,7 @@ export async function logout(): Promise<void> {
   return invoke('logout');
 }
 
-export async function getCurrentUser(): Promise<UserSession> {
+export async function getCurrentUser(): Promise<UserSession | null> {
   return invoke('get_current_user');
 }
 
@@ -60,49 +96,79 @@ export async function getAttentionList(): Promise<AttentionItem[]> {
 
 // ── Dip Records ──
 
-export async function createDipRecord(data: {
-  date: string;
-  time: string;
-  shift_id: number;
-  tank_id: number;
-  product_id: number;
-  reference_point_snapshot?: string;
-  gross_dip_mm: number;
-  auto_dip_mm?: number | null;
-  radar_dip_mm?: number | null;
-  water_dip_mm: number;
-  sludge_dip_mm: number;
-  temperature?: number | null;
-  temperature_unit: string;
-  density?: number | null;
-  tank_status_id?: number | null;
-  custom_tank_status?: string;
-  operator_id: number;
-  remarks?: string;
-}): Promise<DipRecord> {
+export async function createDipRecord(data: CreateDipPayload): Promise<DipRecord> {
   return invoke('create_dip_record', { data });
+}
+
+export async function getDipRecord(id: number): Promise<DipRecord> {
+  return invoke('get_dip_record', { id });
+}
+
+export async function submitDipRecord(id: number): Promise<DipRecord> {
+  return invoke('submit_dip_record', { id });
+}
+
+export async function checkDuplicateDip(
+  tankId: number,
+  date: string,
+  time: string,
+  shiftId: number,
+): Promise<string> {
+  return invoke('check_duplicate_dip', { tankId, date, time, shiftId });
 }
 
 export async function listDipRecords(filters?: {
   date_from?: string;
   date_to?: string;
+  shift_id?: number;
   tank_id?: number;
   review_status?: string;
   approval_status?: string;
+  record_status?: string;
+  operator_id?: number;
   limit?: number;
   offset?: number;
 }): Promise<DipRecordWithRelations[]> {
-  return invoke('list_dip_records_with_relations', { filters });
+  return invoke('list_dip_records_with_relations', { filters: filters ?? {} });
 }
 
-// ── Verification ──
+export async function requestCorrection(
+  id: number,
+  fields: Array<{ field_name: string; old_value?: string | null; new_value: string }>,
+  reason: string,
+): Promise<DipCorrection> {
+  return invoke('request_correction', { id, fields, reason });
+}
 
-export async function reviewDip(dipId: number, action: string, remarks?: string): Promise<DipRecord> {
+export async function listDipCorrections(dipId: number): Promise<DipCorrection[]> {
+  return invoke('list_dip_corrections', { dipId });
+}
+
+// ── Verification / Recheck ──
+
+export async function reviewDip(dipId: number, action: string, remarks?: string): Promise<unknown> {
   return invoke('review_dip', { dipId, action, remarks });
 }
 
 export async function getPendingReviews(): Promise<DipRecordWithRelations[]> {
   return invoke('get_pending_reviews');
+}
+
+export async function recheckDip(
+  originalId: number,
+  newReadings: CreateDipPayload,
+  operatorId: number,
+  remarks?: string,
+): Promise<DipRecheck> {
+  return invoke('recheck_dip', { originalId, newReadings, operatorId, remarks });
+}
+
+export async function approveRecheck(dipId: number): Promise<DipRecheck> {
+  return invoke('approve_recheck', { dipId });
+}
+
+export async function approveCorrection(correctionId: number): Promise<DipCorrection> {
+  return invoke('approve_correction', { correctionId });
 }
 
 // ── Tank Master ──
@@ -129,7 +195,7 @@ export async function listTanks(): Promise<Tank[]> {
 
 export async function listActiveTanks(): Promise<Tank[]> {
   const all = await listTanks();
-  return all.filter((t) => t.active);
+  return all.filter((t) => Boolean(t.active));
 }
 
 // ── Product Master ──
@@ -152,7 +218,7 @@ export async function listProducts(): Promise<Product[]> {
 
 export async function listActiveProducts(): Promise<Product[]> {
   const all = await listProducts();
-  return all.filter((p) => p.active);
+  return all.filter((p) => Boolean(p.active));
 }
 
 // ── Operator Master ──
@@ -175,7 +241,7 @@ export async function listOperators(): Promise<Operator[]> {
 
 export async function listActiveOperators(): Promise<Operator[]> {
   const all = await listOperators();
-  return all.filter((o) => o.active);
+  return all.filter((o) => Boolean(o.active));
 }
 
 // ── Tank Status Master ──
@@ -219,20 +285,20 @@ export async function getAuditLogs(filters?: {
   limit?: number;
   offset?: number;
 }): Promise<AuditLog[]> {
-  return invoke('get_audit_logs', { filters });
+  return invoke('get_audit_logs', { filters: filters ?? {} });
 }
 
 // ── Backup ──
 
-export async function createBackup(): Promise<{ path: string; timestamp: string; size: number }> {
+export async function createBackup(): Promise<string> {
   return invoke('create_backup');
 }
 
-export async function restoreBackup(path: string): Promise<void> {
-  return invoke('restore_backup', { path });
+export async function restoreBackup(filename: string): Promise<void> {
+  return invoke('restore_backup', { filename });
 }
 
-export async function getBackupInfo(): Promise<{ path: string; timestamp: string; size: number }[]> {
+export async function getBackupInfo(): Promise<BackupInfo[]> {
   return invoke('get_backup_info');
 }
 
@@ -242,8 +308,13 @@ export async function getTolerances(): Promise<ToleranceSetting[]> {
   return invoke('get_tolerances');
 }
 
-export async function updateTolerance(id: number, data: Partial<ToleranceSetting>): Promise<ToleranceSetting> {
-  return invoke('update_tolerance', { id, data });
+export async function saveTolerance(data: Partial<ToleranceSetting> & {
+  comparison_type?: string;
+  normal_limit?: number;
+  attention_limit?: number;
+  recheck_limit?: number;
+}): Promise<ToleranceSetting> {
+  return invoke('update_tolerance', { data });
 }
 
 export async function getAppSettings(): Promise<Record<string, string>> {
@@ -255,7 +326,11 @@ export async function getAppSettings(): Promise<Record<string, string>> {
   return record;
 }
 
-export async function seedSampleData(): Promise<void> {
+export async function updateAppSetting(key: string, value: string): Promise<void> {
+  await invoke('update_app_setting', { key, value });
+}
+
+export async function seedSampleData(): Promise<string> {
   return invoke('seed_sample_data');
 }
 
@@ -267,7 +342,7 @@ export async function listExceptions(filters?: {
   limit?: number;
   offset?: number;
 }): Promise<Exception[]> {
-  return invoke('list_exceptions', { filters });
+  return invoke('list_exceptions', { filters: filters ?? {} });
 }
 
 export async function resolveException(id: number, resolution: string): Promise<Exception> {
