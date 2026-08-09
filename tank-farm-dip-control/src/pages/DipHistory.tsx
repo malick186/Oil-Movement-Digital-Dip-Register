@@ -4,7 +4,7 @@ import * as api from '../services/api';
 import DragTable, { type ColumnDef } from '../components/DragTable';
 import { useToastStore } from '../store/toastStore';
 import { useAuthStore } from '../store/authStore';
-import { CheckCircle2, FilePenLine } from 'lucide-react';
+import { CheckCircle2, FilePenLine, Send } from 'lucide-react';
 
 const correctionFields = [
   ['gross_dip_mm', 'Gross Dip (mm)'],
@@ -87,6 +87,28 @@ export default function DipHistory() {
     return value == null ? '' : String(value);
   };
 
+  const submitDraft = async () => {
+    if (!selected || selected.record_status !== 'draft') return;
+    if (!window.confirm(`Submit ${selected.record_number} to Shift In-Charge for verification?`)) return;
+    setActionBusy(true);
+    setMessage(null);
+    try {
+      await api.submitDipRecord(selected.id);
+      setMessage('Draft submitted for verification.');
+      useToastStore.getState().addToast('Draft submitted for verification', 'success');
+      await loadRecords(Boolean(dateFrom || dateTo));
+      const refreshed = await api.listDipRecords({ record_status: 'submitted', limit: 500 });
+      const current = refreshed.find((r) => r.id === selected.id);
+      if (current) setSelected(current); else setSelected(null);
+    } catch (err) {
+      const text = err instanceof Error ? err.message : String(err || 'Failed to submit Draft');
+      setMessage(text);
+      useToastStore.getState().addToast(text, 'error');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
   const requestCorrection = async () => {
     if (!selected) return;
     if (!correctionValue.trim() && correctionField !== 'remarks' && correctionField !== 'custom_tank_status') {
@@ -146,23 +168,14 @@ export default function DipHistory() {
     { key: 'auto_dip_mm', label: 'Auto', render: (r) => <span className="font-mono">{r.auto_dip_mm?.toFixed(1) ?? '--'}</span> },
     { key: 'radar_dip_mm', label: 'Radar', render: (r) => <span className="font-mono">{r.radar_dip_mm?.toFixed(1) ?? '--'}</span> },
     { key: 'water_dip_mm', label: 'Water', render: (r) => <span className="font-mono">{r.water_dip_mm?.toFixed(1) ?? '--'}</span> },
-    {
-      key: 'review_status', label: 'Review', render: (r) => (
-        <span className={`badge ${r.review_status === 'approved' ? 'badge-success' : r.review_status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>{r.review_status}</span>
-      ),
-    },
-    {
-      key: 'approval_status', label: 'Approval', render: (r) => (
-        <span className={`badge ${r.approval_status === 'approved' ? 'badge-success' : r.approval_status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>{r.approval_status}</span>
-      ),
-    },
-    {
-      key: 'actions', label: 'Action', render: (r) => <button onClick={() => openRecord(r)} className="btn btn-secondary btn-sm">Details</button>,
-    },
+    { key: 'record_status', label: 'Record', render: (r) => <span className={r.record_status === 'approved' ? 'badge badge-success' : r.record_status === 'rejected' ? 'badge badge-danger' : 'badge badge-warning'}>{r.record_status}</span> },
+    { key: 'approval_status', label: 'Approval', render: (r) => <span className={r.approval_status === 'approved' ? 'badge badge-success' : r.approval_status === 'rejected' ? 'badge badge-danger' : 'badge badge-warning'}>{r.approval_status}</span> },
+    { key: 'actions', label: 'Action', render: (r) => <button onClick={() => openRecord(r)} className="btn btn-secondary btn-sm">Details</button> },
   ], []);
 
   const mayRequest = user?.role === 'Shift Supervisor' || user?.role === 'Administrator';
   const mayApprove = user?.role === 'Shift In-Charge' || user?.role === 'Administrator';
+  const maySubmitDraft = user?.role === 'Shift Supervisor' || user?.role === 'Shift In-Charge' || user?.role === 'Administrator';
 
   return (
     <div className="space-y-4 anim-fade-up h-full flex flex-col">
@@ -191,7 +204,12 @@ export default function DipHistory() {
                 <h3 className="text-lg font-bold text-dragon-text">{selected.record_number}</h3>
                 <p className="text-xs text-dragon-text-muted">{selected.tank_no} · {selected.product_name} · {selected.date} {selected.time}</p>
               </div>
-              <button onClick={() => setSelected(null)} className="btn btn-secondary btn-sm">Close</button>
+              <div className="flex gap-2">
+                {maySubmitDraft && selected.record_status === 'draft' && (
+                  <button onClick={submitDraft} disabled={actionBusy} className="btn btn-primary btn-sm flex items-center gap-1"><Send size={12} /> Submit Draft</button>
+                )}
+                <button onClick={() => setSelected(null)} className="btn btn-secondary btn-sm">Close</button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
