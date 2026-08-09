@@ -444,6 +444,27 @@ fn apply_correction(conn: &rusqlite::Connection, correction: &DipCorrection) -> 
     let id = correction.dip_record_id;
     let value = correction.new_value.trim();
     match correction.field_name.as_str() {
+        "date" => {
+            chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
+                .map_err(|_| "Date correction must use YYYY-MM-DD format".to_string())?;
+            conn.execute("UPDATE dip_records SET date=?1 WHERE id=?2", params![value, id]).map_err(|e| e.to_string())?;
+        }
+        "time" => {
+            chrono::NaiveTime::parse_from_str(value, "%H:%M")
+                .map_err(|_| "Time correction must use HH:MM 24-hour format".to_string())?;
+            conn.execute("UPDATE dip_records SET time=?1 WHERE id=?2", params![value, id]).map_err(|e| e.to_string())?;
+        }
+        "tank_id" => {
+            let parsed: i64 = value.parse().map_err(|_| "Invalid Tank correction".to_string())?;
+            let (active, reference_point): (i64, Option<String>) = conn
+                .query_row("SELECT active,reference_point FROM tanks WHERE id=?1", params![parsed], |row| Ok((row.get(0)?, row.get(1)?)))
+                .map_err(|_| "Tank not found".to_string())?;
+            if active != 1 { return Err("Corrected Tank is inactive".to_string()); }
+            conn.execute(
+                "UPDATE dip_records SET tank_id=?1,reference_point_snapshot=?2 WHERE id=?3",
+                params![parsed, reference_point, id],
+            ).map_err(|e| e.to_string())?;
+        }
         "gross_dip_mm" | "auto_dip_mm" | "radar_dip_mm" | "water_dip_mm" | "sludge_dip_mm" => {
             let parsed: f64 = value.parse().map_err(|_| format!("Invalid numeric correction value for {}", correction.field_name))?;
             if !parsed.is_finite() || parsed < 0.0 { return Err(format!("{} must be a non-negative number", correction.field_name)); }
@@ -523,6 +544,11 @@ pub fn approve_correction(
         if critical_exception_count(&conn, correction.dip_record_id) > 0 {
             conn.execute("UPDATE dip_records SET review_status='recheck',approval_status='pending',record_status='recheck_required',reviewed_by=?1,reviewed_at=?2 WHERE id=?3", params![session.user_id, now, correction.dip_record_id]).map_err(|e| e.to_string())?;
         } else {
+            resolve_exceptions(
+                &conn,
+                correction.dip_record_id,
+                &format!("Correction reviewed and accepted: {}", correction.reason.clone().unwrap_or_default()),
+            )?;
             conn.execute("UPDATE dip_records SET review_status='approved',approval_status='approved',record_status='approved',approved_by=?1,approved_at=?2 WHERE id=?3", params![session.user_id, now, correction.dip_record_id]).map_err(|e| e.to_string())?;
         }
     }

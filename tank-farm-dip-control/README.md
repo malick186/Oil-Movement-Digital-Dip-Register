@@ -87,6 +87,15 @@ tank-farm-dip-control/
 - **Accessibility**: aria-live on toast container
 - **Fonts**: Poppins (UI) + JetBrains Mono (data)
 
+## First Run
+
+1. Extract the portable folder to a normal user-writable location, for example `%LOCALAPPDATA%\TankFarmDipControl` or Documents.
+2. Run `Tank Farm Dip Control.exe` as a normal Windows user. Do not use **Run as administrator**.
+3. When no users exist, the application opens the one-time Administrator Setup screen. Create the initial local Administrator; no reusable or demo password is provided.
+4. Sign in and configure Tank, Product, Operator, Tank Status and tolerance master data before operational use. Initial reference roles, shifts, locations, product types and tank statuses are created safely on first start; sample operational data is optional and Administrator-controlled.
+
+The live SQLite database is stored at `%LOCALAPPDATA%\TankFarmDipControl\Data\tank_farm_dip.db`. Backups are stored below the same user-writable data area. If a legacy portable database exists beside an older executable under `data\tank_farm_dip.db`, the application copies it to the user-local data directory on first start when no destination database exists.
+
 ## How to Run (Development)
 
 ```bash
@@ -95,26 +104,37 @@ npm run dev        # starts Vite dev server with HMR
 ```
 
 ```bash
-cd src-tauri
-cargo tauri dev    # starts full Tauri desktop window
+npm run dev         # frontend-only development server
+npm run tauri dev   # full Tauri desktop window
 ```
 
 ## How to Build (Windows .exe)
 
 ```bash
-npm run build                           # builds frontend to dist/
-cd src-tauri
-cargo build --release --target x86_64-pc-windows-gnu
-# Binary at: target/x86_64-pc-windows-gnu/release/app.exe
+npm ci
+npm test
+npm run build
+cargo test --manifest-path src-tauri/Cargo.toml
+cargo build --release --manifest-path src-tauri/Cargo.toml
+npx tauri build --no-bundle
 ```
 
-Copy `app.exe`, `app_lib.dll`, and `WebView2Loader.dll` to the same folder to distribute.
+The portable application executable is created at `src-tauri/target/release/app.exe`. Rename it to `Tank Farm Dip Control.exe` when preparing the delivery folder. A built application does not require Node.js, Rust, a server, or an internet connection at runtime.
 
 ## Requirements (End User)
 
 - Windows 10 or Windows 11
-- WebView2 Evergreen Runtime (pre-installed on most Win10/11)
+- Microsoft Edge WebView2 Runtime (normally included with supported Windows 10/11 corporate images; verify it during deployment because this portable build does not download it)
 - No installation, no admin rights, no internet required
+
+## Offline Deployment Validation
+
+- Copy the complete portable folder to a standard-user Windows 10/11 test account.
+- Disconnect network access and launch the executable without elevation.
+- Complete first-run Administrator setup against a clean user-local database.
+- Restart the application and verify the same records persist.
+- Exercise backup/restore and confirm the pre-restore safety snapshot appears in the backup list.
+- Corporate application-control policy may still require IT to allow-list the executable and WebView2 loader; this is separate from administrator rights.
 
 ## Downloads
 

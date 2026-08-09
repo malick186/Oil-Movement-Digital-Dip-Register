@@ -515,7 +515,10 @@ pub fn list_dip_records(
 fn allowed_correction_field(field: &str) -> bool {
     matches!(
         field,
-        "gross_dip_mm"
+        "date"
+            | "time"
+            | "tank_id"
+            | "gross_dip_mm"
             | "auto_dip_mm"
             | "radar_dip_mm"
             | "water_dip_mm"

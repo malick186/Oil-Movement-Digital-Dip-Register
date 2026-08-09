@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { DipCorrection, DipRecordWithRelations, Operator, Product, TankStatus } from '../types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { DipCorrection, DipRecordWithRelations, Operator, Product, Tank, TankStatus } from '../types';
 import * as api from '../services/api';
 import DragTable, { type ColumnDef } from '../components/DragTable';
 import { useToastStore } from '../store/toastStore';
@@ -7,6 +7,9 @@ import { useAuthStore } from '../store/authStore';
 import { CheckCircle2, FilePenLine, Send } from 'lucide-react';
 
 const correctionFields = [
+  ['date', 'Date'],
+  ['time', 'Time (HH:MM)'],
+  ['tank_id', 'Tank No.'],
   ['gross_dip_mm', 'Gross Dip (mm)'],
   ['auto_dip_mm', 'Auto Dip (mm)'],
   ['radar_dip_mm', 'Radar Dip (mm)'],
@@ -26,6 +29,7 @@ export default function DipHistory() {
   const user = useAuthStore((s) => s.user);
   const [records, setRecords] = useState<DipRecordWithRelations[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
+  const [tanks, setTanks] = useState<Tank[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [statuses, setStatuses] = useState<TankStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +44,7 @@ export default function DipHistory() {
   const [message, setMessage] = useState<string | null>(null);
   const initialLoaded = useRef(false);
 
-  const loadRecords = async (withFilters = false) => {
+  const loadRecords = useCallback(async (withFilters = false) => {
     setLoading(true);
     try {
       const data = await api.listDipRecords({
@@ -54,7 +58,7 @@ export default function DipHistory() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateFrom, dateTo]);
 
   useEffect(() => {
     if (initialLoaded.current) return;
@@ -62,12 +66,13 @@ export default function DipHistory() {
     (async () => {
       await Promise.all([
         loadRecords(false),
+        api.listActiveTanks().then(setTanks).catch(() => undefined),
         api.listActiveOperators().then(setOperators).catch(() => undefined),
         api.listActiveProducts().then(setProducts).catch(() => undefined),
         api.listTankStatuses().then((rows) => setStatuses(rows.filter((r) => Boolean(r.active)))).catch(() => undefined),
       ]);
     })();
-  }, []);
+  }, [loadRecords]);
 
   const openRecord = async (record: DipRecordWithRelations) => {
     setSelected(record);
@@ -263,7 +268,7 @@ export default function DipHistory() {
                   </div>
                   <div>
                     <label className="block text-xs text-dragon-text-secondary mb-1">Corrected Value</label>
-                    <CorrectionInput field={correctionField} value={correctionValue} setValue={setCorrectionValue} operators={operators} products={products} statuses={statuses} />
+                    <CorrectionInput field={correctionField} value={correctionValue} setValue={setCorrectionValue} tanks={tanks} operators={operators} products={products} statuses={statuses} />
                   </div>
                 </div>
                 <div className="mt-3">
@@ -282,7 +287,13 @@ export default function DipHistory() {
   );
 }
 
-function CorrectionInput({ field, value, setValue, operators, products, statuses }: { field: string; value: string; setValue: (value: string) => void; operators: Operator[]; products: Product[]; statuses: TankStatus[] }) {
+function CorrectionInput({ field, value, setValue, tanks, operators, products, statuses }: { field: string; value: string; setValue: (value: string) => void; tanks: Tank[]; operators: Operator[]; products: Product[]; statuses: TankStatus[] }) {
+  if (field === 'date' || field === 'time') {
+    return <input type={field} value={value} onChange={(e) => setValue(e.target.value)} className="input-field" />;
+  }
+  if (field === 'tank_id') {
+    return <select value={value} onChange={(e) => setValue(e.target.value)} className="input-field"><option value="">Select...</option>{tanks.map((t) => <option key={t.id} value={t.id}>{t.tank_no}</option>)}</select>;
+  }
   if (field === 'temperature_unit') {
     return <select value={value} onChange={(e) => setValue(e.target.value)} className="input-field"><option value="">Select...</option><option value="C">°C</option><option value="F">°F</option></select>;
   }

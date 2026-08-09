@@ -36,6 +36,26 @@ interface NavItem {
   icon: ReactNode;
 }
 
+const pageRoles: Partial<Record<Page, string[]>> = {
+  dashboard: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'],
+  'new-dip': ['Shift Supervisor', 'Shift In-Charge', 'Administrator'],
+  'dip-verification': ['Shift In-Charge', 'Administrator'],
+  'shift-closing': ['Shift In-Charge', 'Administrator'],
+  'tank-status': ['Shift Supervisor', 'Shift In-Charge', 'Administrator'],
+  exceptions: ['Shift In-Charge', 'Administrator'],
+  'dip-history': ['Shift Supervisor', 'Shift In-Charge', 'Administrator'],
+  'tank-trends': ['Shift In-Charge', 'Administrator'],
+  reports: ['Shift In-Charge', 'Administrator'],
+  'tank-master': ['Administrator'],
+  'product-master': ['Administrator'],
+  'operator-master': ['Administrator'],
+  'tank-status-master': ['Administrator'],
+  users: ['Administrator'],
+  settings: ['Administrator'],
+  'backup-restore': ['Administrator'],
+  'audit-log': ['Administrator'],
+};
+
 interface NavSection {
   heading: string;
   items: NavItem[];
@@ -162,7 +182,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                   {section.heading}
                 </div>
               )}
-              {section.items.map((item) =>
+              {section.items.filter((item) => !user || pageRoles[item.page]?.includes(user.role)).map((item) =>
                 isCollapsed ? (
                   <button
                     key={item.page}
