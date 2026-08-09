@@ -1,0 +1,66 @@
+name: Validate and Build Windows
+
+on:
+  push:
+    branches:
+      - main
+      - 'agent/**'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tank-farm-dip-control
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tank-farm-dip-control/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Frontend tests
+        run: npm test
+
+      - name: Frontend typecheck and build
+        run: npm run build
+
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Build Tauri release binary
+        run: cargo build --release --manifest-path src-tauri/Cargo.toml
+
+      - name: Prepare portable artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path portable-ci | Out-Null
+          Copy-Item src-tauri/target/release/app.exe 'portable-ci/Tank Farm Dip Control.exe'
+          if (Test-Path src-tauri/target/release/app_lib.dll) {
+            Copy-Item src-tauri/target/release/app_lib.dll portable-ci/app_lib.dll
+          }
+
+      - name: Upload portable Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankFarmDipControl-Portable-${{ github.sha }}
+          path: tank-farm-dip-control/portable-ci/
+          if-no-files-found: error
