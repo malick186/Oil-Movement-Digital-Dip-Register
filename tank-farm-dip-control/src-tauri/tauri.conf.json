@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Tank Farm Dip Control",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "identifier": "com.tankfarm.dipcontrol",
   "build": {
     "frontendDist": "../dist",
@@ -23,10 +23,15 @@
       }
     ],
     "security": {
-      "csp": null,
-      "assetProtocol": {
-        "enable": true,
-        "scope": ["**"]
+      "csp": {
+        "default-src": "'self' customprotocol:",
+        "connect-src": "ipc: http://ipc.localhost",
+        "font-src": "'self' data:",
+        "img-src": "'self' data: blob:",
+        "style-src": "'self' 'unsafe-inline'"
+      },
+      "headers": {
+        "X-Content-Type-Options": "nosniff"
       }
     }
   },
