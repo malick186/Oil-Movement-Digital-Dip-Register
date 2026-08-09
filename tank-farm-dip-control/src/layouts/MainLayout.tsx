@@ -19,7 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Fuel,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -143,31 +142,28 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('resize', updateIndicator);
   }, [updateIndicator]);
 
-  const sidebarWidth = isCollapsed ? 'w-[56px]' : 'w-[220px]';
+  const sidebarWidth = isCollapsed ? 'w-[68px]' : 'w-[248px]';
 
   return (
     <div className="flex h-screen w-screen bg-dragon-bg overflow-hidden">
       <aside
         ref={sidebarRef}
-        className={`relative flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out ${sidebarWidth} bg-dragon-card border-r border-dragon-border overflow-hidden`}
+        className={`prl-sidebar relative flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out ${sidebarWidth} bg-dragon-card border-r border-dragon-border overflow-hidden`}
       >
         <div
           className="sidebar-active-indicator"
           style={{ top: `${indicatorStyle.top}px`, height: `${indicatorStyle.height}px` }}
         />
 
-        <div className="flex items-center h-[50px] px-3 border-b border-dragon-border">
+        <div className="flex items-center h-[76px] px-2.5 border-b border-dragon-border">
           {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <Fuel size={18} className="text-dragon-primary" />
-              <span className="text-sm font-semibold text-dragon-text tracking-wide">
-                TANK FARM
-              </span>
-            </div>
+            <button onClick={() => setPage('dashboard')} className="prl-brand-panel h-[58px] flex-1 px-2.5 flex items-center justify-center" title="Pakistan Refinery Limited">
+              <img src="/prl-logo.png" alt="Pakistan Refinery Limited" className="w-full h-[50px] object-contain" />
+            </button>
           )}
           <button
             onClick={toggleSidebar}
-            className={`window-btn ${isCollapsed ? 'mx-auto' : 'ml-auto'}`}
+            className={`window-btn ${isCollapsed ? 'mx-auto' : 'ml-2 flex-shrink-0'}`}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -178,7 +174,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           {navSections.map((section) => (
             <div key={section.heading} className="mb-1" style={{ transformStyle: 'preserve-3d' }}>
               {!isCollapsed && (
-                <div className="px-3 py-1 text-[10px] font-semibold tracking-wider text-dragon-text-muted uppercase">
+                <div className="prl-nav-heading px-3 py-1 text-[10px] font-bold tracking-[0.14em] uppercase">
                   {section.heading}
                 </div>
               )}
@@ -191,8 +187,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                     title={item.label}
                     className={`nav-btn-3d flex items-center justify-center h-10 rounded-lg mx-1 w-[calc(100%-8px)] ${
                       currentPage === item.page
-                        ? 'active bg-dragon-primary/10 text-dragon-primary'
-                        : 'text-dragon-text-secondary hover:bg-dragon-accent/60 hover:text-dragon-text'
+                        ? 'active prl-nav-active'
+                        : 'prl-nav-item text-dragon-text-secondary hover:bg-dragon-accent/60 hover:text-dragon-text'
                     }`}
                   >
                     {item.icon}
@@ -204,8 +200,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                     data-active={currentPage === item.page ? 'true' : 'false'}
                     className={`nav-btn-3d flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium rounded-lg mx-1.5 w-[calc(100%-12px)] ${
                       currentPage === item.page
-                        ? 'active bg-dragon-primary/10 text-dragon-primary'
-                        : 'text-dragon-text-secondary hover:bg-dragon-accent/60 hover:text-dragon-text'
+                        ? 'active prl-nav-active'
+                        : 'prl-nav-item text-dragon-text-secondary hover:bg-dragon-accent/60 hover:text-dragon-text'
                     }`}
                   >
                     {item.icon}
@@ -259,13 +255,13 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-col flex-1 min-w-0">
         <header className="titlebar">
           <div className="flex items-center gap-3">
-            <Fuel size={18} className="text-dragon-primary" />
+            <div className="w-1 h-9 rounded-full bg-gradient-to-b from-dragon-primary to-dragon-secondary" />
             <div>
               <h1 className="text-sm font-semibold text-dragon-text">
                 Tank Farm & Terminal Dip Recording Control Center
               </h1>
               <p className="text-[10px] text-dragon-text-muted">
-                Oil Movement Digital Dip Register
+                Pakistan Refinery Limited · Oil Movement
               </p>
             </div>
           </div>

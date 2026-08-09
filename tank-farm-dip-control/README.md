@@ -2,6 +2,8 @@
 
 Offline-first Windows desktop application for oil movement digital dip recording and tank farm management. Built with Tauri 2.x, React 19, and Rust.
 
+The interface uses Pakistan Refinery Limited's current corporate logo and a PRL-derived green, navy and blue color system across light and dark modes. The logo asset is sourced from the [official PRL website](https://www.prl.com.pk/wp-content/uploads/2025/03/PRL_NEW_LOGO.png) and remains a Pakistan Refinery Limited trademark.
+
 ## Features
 
 ### Operations

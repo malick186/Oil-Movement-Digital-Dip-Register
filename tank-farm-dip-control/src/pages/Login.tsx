@@ -5,13 +5,16 @@ import { loginSchema, type LoginFormData } from '../validation/schemas';
 import { useAuthStore } from '../store/authStore';
 import { APP_VERSION } from '../version';
 import * as api from '../services/api';
-import { Fuel, AlertCircle, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { useThemeStore } from '../store/themeStore';
 
 export default function Login() {
   const login = useAuthStore((s) => s.login);
   const bootstrap = useAuthStore((s) => s.bootstrap);
   const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggle);
   const [submitting, setSubmitting] = useState(false);
   const [bootstrapRequired, setBootstrapRequired] = useState<boolean | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -95,24 +98,28 @@ export default function Login() {
         }}
       />
 
+      <button
+        onClick={toggleTheme}
+        className="absolute right-5 top-5 z-10 flex items-center gap-2 px-3 py-2 rounded-full border border-dragon-border bg-dragon-card/85 text-xs text-dragon-text-secondary hover:text-dragon-text"
+        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+        {theme === 'dark' ? 'Light' : 'Dark'}
+      </button>
+
       <div className="glass-card w-full max-w-md p-8 anim-scale-in">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-xl bg-dragon-primary/10 flex items-center justify-center">
-              {bootstrapRequired ? (
-                <ShieldCheck size={24} className="text-dragon-primary" />
-              ) : (
-                <Fuel size={24} className="text-dragon-primary" />
-              )}
-            </div>
+          <div className="prl-brand-panel max-w-[250px] h-[112px] mx-auto mb-5 px-4 flex items-center justify-center relative">
+            <img src="/prl-logo.png" alt="Pakistan Refinery Limited" className="w-full h-full object-contain" />
+            {bootstrapRequired && <ShieldCheck size={20} className="absolute right-3 bottom-3 text-dragon-primary" />}
           </div>
           <h1 className="text-xl font-bold text-dragon-text tracking-wide">
-            {bootstrapRequired ? 'First-Run Setup' : 'Tank Farm Control'}
+            {bootstrapRequired ? 'First-Run Administrator Setup' : 'Tank Farm & Terminal Control Center'}
           </h1>
           <p className="text-xs text-dragon-text-secondary mt-1.5">
             {bootstrapRequired
               ? 'Create the local Administrator account'
-              : 'Oil Movement Digital Dip Register'}
+              : 'PRL Oil Movement Digital Dip Register'}
           </p>
         </div>
 
