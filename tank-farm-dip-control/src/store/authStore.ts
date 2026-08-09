@@ -8,6 +8,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<void>;
+  bootstrap: (username: string, fullName: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
@@ -25,7 +26,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = await api.login(username, password);
       set({ user, isAuthenticated: true, isLoading: false, error: null });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login failed';
+      const message = err instanceof Error ? err.message : String(err || 'Login failed');
+      set({ isLoading: false, error: message });
+      throw err;
+    }
+  },
+
+  bootstrap: async (username: string, fullName: string, password: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const user = await api.bootstrapAdmin({ username, fullName, password });
+      set({ user, isAuthenticated: true, isLoading: false, error: null });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err || 'First-run setup failed');
       set({ isLoading: false, error: message });
       throw err;
     }
@@ -43,7 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const user = await api.getCurrentUser();
-      set({ user, isAuthenticated: true, isLoading: false });
+      set({ user, isAuthenticated: Boolean(user), isLoading: false, error: null });
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
