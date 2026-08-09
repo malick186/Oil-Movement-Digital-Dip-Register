@@ -3,6 +3,7 @@ import * as api from '../services/api';
 import type { Tank } from '../types';
 import { FileText, Download } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useToastStore } from '../store/toastStore';
 
 type ReportType = 'daily-dip' | 'shift-summary' | 'tank-wise' | 'exception-report' | 'audit-trail' | 'closing-report';
 
@@ -104,7 +105,7 @@ export default function Reports() {
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     if (!resultData?.length || !selectedReport) return;
     const headers = Object.keys(resultData[0] as Record<string, unknown>);
     const rows = resultData.map((row) =>
@@ -118,13 +119,15 @@ export default function Reports() {
       }).join(',')
     );
     const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${selectedReport}_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      const outputPath = await api.exportReportCsv(
+        `${selectedReport}_${new Date().toISOString().slice(0, 10)}.csv`,
+        csv,
+      );
+      useToastStore.getState().addToast(`Report saved in the portable Reports folder: ${outputPath}`, 'success');
+    } catch (error) {
+      useToastStore.getState().addToast(error instanceof Error ? error.message : String(error), 'error');
+    }
   };
 
   return (
@@ -190,7 +193,7 @@ export default function Reports() {
               <Download size={14} /> {loading ? 'Generating...' : 'Generate Report'}
             </button>
             {resultData && resultData.length > 0 && (
-              <button onClick={handleExportCSV} className="btn btn-secondary flex items-center gap-1"><Download size={14} /> Export CSV</button>
+              <button onClick={() => void handleExportCSV()} className="btn btn-secondary flex items-center gap-1"><Download size={14} /> Export CSV</button>
             )}
           </div>
         </div>

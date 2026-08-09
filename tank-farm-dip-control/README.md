@@ -91,12 +91,29 @@ tank-farm-dip-control/
 
 ## First Run
 
-1. Extract the portable folder to a normal user-writable location, for example `%LOCALAPPDATA%\TankFarmDipControl` or Documents.
+1. Extract the complete portable folder to its final writable location. A secured PRL shared folder may be used when all authorized users have read/write permission.
 2. Run `Tank Farm Dip Control.exe` as a normal Windows user. Do not use **Run as administrator**.
 3. When no users exist, the application opens the one-time Administrator Setup screen. Create the initial local Administrator; no reusable or demo password is provided.
 4. Sign in and configure Tank, Product, Operator, Tank Status and tolerance master data before operational use. Initial reference roles, shifts, locations, product types and tank statuses are created safely on first start; sample operational data is optional and Administrator-controlled.
 
-The live SQLite database is stored at `%LOCALAPPDATA%\TankFarmDipControl\Data\tank_farm_dip.db`. Backups are stored below the same user-writable data area. If a legacy portable database exists beside an older executable under `data\tank_farm_dip.db`, the application copies it to the user-local data directory on first start when no destination database exists.
+All application-created files stay beside `Tank Farm Dip Control.exe`:
+
+| Folder | Contents |
+|---|---|
+| `Data` | Live SQLite database: `tank_farm_dip.db` |
+| `Backup` | Manual and pre-restore safety backups |
+| `Logs` | Rotating application diagnostic logs |
+| `Reports` | CSV report exports |
+| `Config` | Shared-folder instance lock and future configuration files |
+| `Temp` | WebView2 profile/cache and process temporary files |
+
+On the first v0.1.8 start, if `Data\tank_farm_dip.db` does not exist but the earlier v0.1.7 user-local database exists, the application validates and copies it into portable storage using SQLite's backup API. The source database is retained as a safety copy.
+
+## Shared Folder Operating Rule
+
+The same portable folder and records can be used by Shift Supervisors and Shift In-Charges through shortcuts. Only one running application instance is permitted against that folder at a time. If another user already has it open, the second user receives an **Application in Use** message and must wait until the first user closes it. This safeguard is mandatory because an ordinary SQLite database must not be edited concurrently by separate computers over an SMB/network share.
+
+SQLite uses rollback-journal mode with full synchronization instead of WAL mode for this portable/shared-folder deployment. Do not copy only the `.exe`; keep the executable and its generated folders together, and ensure the shared location is included in PRL's normal backup arrangements.
 
 ## How to Run (Development)
 
@@ -133,7 +150,7 @@ The portable application executable is created at `src-tauri/target/release/app.
 
 - Copy the complete portable folder to a standard-user Windows 10/11 test account.
 - Disconnect network access and launch the executable without elevation.
-- Complete first-run Administrator setup against a clean user-local database.
+- Complete first-run Administrator setup against the portable `Data\tank_farm_dip.db` database.
 - Restart the application and verify the same records persist.
 - Exercise backup/restore and confirm the pre-restore safety snapshot appears in the backup list.
 - Corporate application-control policy may still require IT to allow-list the executable and WebView2 loader; this is separate from administrator rights.

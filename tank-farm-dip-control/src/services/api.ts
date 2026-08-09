@@ -302,6 +302,10 @@ export async function getBackupInfo(): Promise<BackupInfo[]> {
   return invoke('get_backup_info');
 }
 
+export async function exportReportCsv(filename: string, content: string): Promise<string> {
+  return invoke('export_report_csv', { filename, content });
+}
+
 // ── Settings / Tolerances ──
 
 export async function getTolerances(): Promise<ToleranceSetting[]> {

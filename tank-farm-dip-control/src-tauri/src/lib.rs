@@ -1,27 +1,52 @@
 mod commands;
 mod db;
 mod models;
+mod storage;
 mod util;
 
 use crate::models::UserSession;
 use std::sync::Mutex;
 use tauri::Manager;
+use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let portable_paths = storage::PortablePaths::discover()
+        .expect("unable to determine the portable application folder");
+    portable_paths
+        .ensure_directories()
+        .expect("unable to create portable application folders beside the executable");
+    portable_paths.configure_process_environment();
+    let log_directory = portable_paths.logs.clone();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .targets([Target::new(TargetKind::Folder {
+                    path: log_directory,
+                    file_name: Some("tank-farm-dip-control".to_string()),
+                })])
+                .build(),
+        )
+        .setup(move |app| {
+            let instance_lock = match storage::InstanceLock::acquire(&portable_paths) {
+                Ok(lock) => lock,
+                Err(error) => {
+                    app.dialog()
+                        .message(error.to_string())
+                        .title("Tank Farm Dip Control - Shared Folder In Use")
+                        .blocking_show();
+                    return Err(error.into());
+                }
+            };
 
-            let conn = db::init_db(app.handle())?;
+            let conn = db::init_db(&portable_paths)?;
+            app.manage(portable_paths.clone());
+            app.manage(instance_lock);
             app.manage(Mutex::new(conn));
             app.manage(Mutex::new(None::<UserSession>));
 
@@ -85,6 +110,7 @@ pub fn run() {
             commands::settings::seed_sample_data,
             commands::exceptions::list_exceptions,
             commands::exceptions::resolve_exception,
+            commands::reports::export_report_csv,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

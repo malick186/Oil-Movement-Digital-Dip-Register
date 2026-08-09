@@ -6,6 +6,7 @@ pub mod dashboard;
 pub mod dips;
 pub mod exceptions;
 pub mod masters;
+pub mod reports;
 pub mod settings;
 pub mod shift_closing;
 pub mod verification;

@@ -4,16 +4,10 @@ use std::fs;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use crate::db::get_db_path;
+use crate::db::configure_connection;
 use crate::models::{BackupInfo, UserSession};
+use crate::storage::PortablePaths;
 use crate::util::{audit_log, require_roles};
-
-fn backup_dir(app_handle: &tauri::AppHandle) -> std::path::PathBuf {
-    get_db_path(app_handle)
-        .parent()
-        .map(|p| p.join("backups"))
-        .unwrap_or_else(|| std::path::PathBuf::from("backups"))
-}
 
 fn make_snapshot(
     conn: &rusqlite::Connection,
@@ -33,12 +27,12 @@ fn make_snapshot(
 
 #[tauri::command]
 pub fn create_backup(
-    app_handle: tauri::AppHandle,
+    paths: tauri::State<'_, PortablePaths>,
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<String, String> {
     let session = require_roles(&current_session, &["Administrator"])?;
-    let directory = backup_dir(&app_handle);
+    let directory = paths.backup.clone();
     let conn = db.lock().map_err(|e| e.to_string())?;
     let path = make_snapshot(&conn, &directory, "tank_farm_backup")?;
     let filename = path
@@ -65,7 +59,7 @@ pub fn create_backup(
 #[tauri::command]
 pub fn restore_backup(
     filename: String,
-    app_handle: tauri::AppHandle,
+    paths: tauri::State<'_, PortablePaths>,
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<(), String> {
@@ -77,7 +71,7 @@ pub fn restore_backup(
         return Err("Only .db backup files can be restored".to_string());
     }
 
-    let directory = backup_dir(&app_handle);
+    let directory = paths.backup.clone();
     fs::create_dir_all(&directory).map_err(|e| format!("Failed to access backup directory: {}", e))?;
     let path = directory.join(&filename);
     if !path.exists() {
@@ -117,9 +111,7 @@ pub fn restore_backup(
             .map_err(|e| format!("Failed to restore database: {}", e))?;
     }
 
-    destination
-        .execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;")
-        .map_err(|e| format!("Failed to reinitialize database after restore: {}", e))?;
+    configure_connection(&destination)?;
 
     audit_log(
         &destination,
@@ -143,11 +135,11 @@ pub fn restore_backup(
 
 #[tauri::command]
 pub fn get_backup_info(
-    app_handle: tauri::AppHandle,
+    paths: tauri::State<'_, PortablePaths>,
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Vec<BackupInfo>, String> {
     let _session = require_roles(&current_session, &["Administrator"])?;
-    let directory = backup_dir(&app_handle);
+    let directory = paths.backup.clone();
     if !directory.exists() {
         return Ok(Vec::new());
     }

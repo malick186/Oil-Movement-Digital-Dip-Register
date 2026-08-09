@@ -1,73 +1,96 @@
+use rusqlite::backup::Backup;
 use rusqlite::Connection;
-use std::path::PathBuf;
+use std::time::Duration;
+
+use crate::storage::{PortablePaths, DB_FILENAME};
 
 const SCHEMA_VERSION: i64 = 1;
-const DB_FILENAME: &str = "tank_farm_dip.db";
 
-fn legacy_portable_db_path() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.join("data").join(DB_FILENAME)))
-        .unwrap_or_else(|| PathBuf::from("data").join(DB_FILENAME))
+fn legacy_user_local_db_path() -> Option<std::path::PathBuf> {
+    dirs::data_local_dir().map(|base| {
+        base.join("TankFarmDipControl")
+            .join("Data")
+            .join(DB_FILENAME)
+    })
 }
 
-pub fn get_db_path(_app_handle: &tauri::AppHandle) -> PathBuf {
-    let legacy_path = legacy_portable_db_path();
-    let preferred_dir = dirs::data_local_dir()
-        .map(|base| base.join("TankFarmDipControl").join("Data"))
-        .unwrap_or_else(|| {
-            legacy_path
-                .parent()
-                .map(|p| p.to_path_buf())
-                .unwrap_or_else(|| PathBuf::from("data"))
-        });
-
-    if let Err(error) = std::fs::create_dir_all(&preferred_dir) {
-        log::warn!(
-            "Unable to create user-local data directory {}: {}. Falling back to portable data path.",
-            preferred_dir.display(),
-            error
-        );
-        return legacy_path;
+fn migrate_user_local_database(paths: &PortablePaths) -> Result<(), String> {
+    let destination_path = paths.database_path();
+    if destination_path.exists() {
+        return Ok(());
     }
 
-    let preferred_path = preferred_dir.join(DB_FILENAME);
+    let Some(source_path) = legacy_user_local_db_path().filter(|path| path.exists()) else {
+        return Ok(());
+    };
 
-    // Preserve existing portable deployments. On first run of this version, copy the
-    // previous database beside the executable into the writable user-local directory.
-    // SQLite is reopened normally afterwards and WAL/foreign-key pragmas are reapplied.
-    if !preferred_path.exists() && legacy_path.exists() && legacy_path != preferred_path {
-        if let Err(error) = std::fs::copy(&legacy_path, &preferred_path) {
-            log::warn!(
-                "Unable to migrate legacy database {} to {}: {}",
-                legacy_path.display(),
-                preferred_path.display(),
-                error
-            );
-            return legacy_path;
-        }
-        log::info!(
-            "Migrated legacy portable database from {} to {}",
-            legacy_path.display(),
-            preferred_path.display()
-        );
+    let source = Connection::open_with_flags(
+        &source_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .map_err(|error| {
+        format!(
+            "Failed to open the previous user-local database {}: {error}",
+            source_path.display()
+        )
+    })?;
+    let integrity: String = source
+        .query_row("PRAGMA quick_check", [], |row| row.get(0))
+        .map_err(|error| format!("Failed to validate the previous database: {error}"))?;
+    if !integrity.eq_ignore_ascii_case("ok") {
+        return Err(format!(
+            "The previous database failed its integrity check and was not migrated: {integrity}"
+        ));
     }
 
-    preferred_path
+    let mut destination = Connection::open(&destination_path).map_err(|error| {
+        format!(
+            "Failed to create the portable database {}: {error}",
+            destination_path.display()
+        )
+    })?;
+    {
+        let backup = Backup::new(&source, &mut destination)
+            .map_err(|error| format!("Failed to initialize database migration: {error}"))?;
+        backup
+            .run_to_completion(100, Duration::from_millis(25), None)
+            .map_err(|error| format!("Failed to migrate the previous database: {error}"))?;
+    }
+
+    log::info!(
+        "Migrated user-local database from {} to portable storage at {}",
+        source_path.display(),
+        destination_path.display()
+    );
+    Ok(())
 }
 
-pub fn init_db(app_handle: &tauri::AppHandle) -> Result<Connection, String> {
-    let db_path = get_db_path(app_handle);
-    if let Some(parent) = db_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create application data directory: {}", e))?;
-    }
+pub fn configure_connection(conn: &Connection) -> Result<(), String> {
+    // WAL uses a shared-memory file and is unsafe on ordinary SMB/network shares.
+    // DELETE journal mode plus the application-wide shared-folder lock permits one
+    // controlled writer at a time while retaining SQLite's rollback protection.
+    conn.execute_batch(
+        "PRAGMA journal_mode=DELETE;
+         PRAGMA foreign_keys=ON;
+         PRAGMA busy_timeout=15000;
+         PRAGMA synchronous=FULL;",
+    )
+    .map_err(|error| format!("Failed to configure portable SQLite: {error}"))?;
+    Ok(())
+}
+
+pub fn init_db(paths: &PortablePaths) -> Result<Connection, String> {
+    paths
+        .ensure_directories()
+        .map_err(|error| format!("Failed to create portable application folders: {error}"))?;
+    migrate_user_local_database(paths)?;
+
+    let db_path = paths.database_path();
 
     let conn = Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open local database at {}: {}", db_path.display(), e))?;
+        .map_err(|e| format!("Failed to open portable database at {}: {}", db_path.display(), e))?;
 
-    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
-        .map_err(|e| format!("Failed to configure SQLite: {}", e))?;
+    configure_connection(&conn)?;
 
     run_migrations(&conn)?;
 
