@@ -116,10 +116,6 @@
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
 @keyframes spin-slow {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -128,29 +124,14 @@
   0%, 100% { opacity: 0.5; transform: scale(0.95); }
   50% { opacity: 1; transform: scale(1.05); }
 }
-@keyframes border-glow {
-  0%, 100% { border-color: transparent; box-shadow: 0 0 0 0 rgba(79, 144, 230, 0.2); }
-  50% { border-color: var(--dr-primary); box-shadow: 0 0 12px 0 rgba(79, 144, 230, 0.15); }
-}
 @keyframes breathe {
   0%, 100% { box-shadow: 0 0 20px rgba(79, 144, 230, 0.05), 0 8px 32px rgba(0, 0, 0, 0.2); }
   50% { box-shadow: 0 0 40px rgba(79, 144, 230, 0.12), 0 8px 32px rgba(0, 0, 0, 0.3); }
 }
-@keyframes progressPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-@keyframes fluidWave {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 
 /* ===== ANIMATION CLASSES ===== */
 .anim-fade-up { animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.anim-fade-in { animation: fadeIn 0.3s ease forwards; }
 .anim-scale-in { animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.anim-breathe { animation: breathe 3s ease-in-out infinite; }
 
 /* ===== GLASS-MORPHISM CARDS ===== */
 .glass-card {
@@ -194,21 +175,6 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
 }
 
-/* ===== SUMMARY CARD ===== */
-.summary-card {
-  background: color-mix(in srgb, var(--dr-card) 80%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid color-mix(in srgb, var(--dr-primary) 20%, var(--dr-border));
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-}
-.summary-card-header {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--dr-primary) 10%, transparent) 0%, color-mix(in srgb, var(--dr-purple) 8%, transparent) 100%);
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--dr-border) 50%, transparent);
-}
-
 /* ===== TITLE BAR ===== */
 .titlebar {
   display: flex;
@@ -249,23 +215,6 @@
   transition: top 0.2s ease, height 0.2s ease;
 }
 
-/* ===== PROGRESS BAR ===== */
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background: var(--dr-border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--dr-primary), var(--dr-secondary));
-  border-radius: 10px;
-  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
-}
-
 /* ===== LOADING STATE ===== */
 .loading-state {
   display: flex;
@@ -286,22 +235,6 @@
   animation: spin-slow 0.8s linear infinite;
 }
 
-/* ===== SKELETON ===== */
-.skeleton {
-  background: linear-gradient(90deg, var(--dr-border) 25%, var(--dr-accent) 50%, var(--dr-border) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s linear infinite;
-  border-radius: var(--radius);
-}
-
-/* ===== GRADIENT TEXT ===== */
-.text-gradient {
-  background: linear-gradient(135deg, var(--dr-primary), var(--dr-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 /* ===== STATUS DOT PULSE ===== */
 .status-dot {
   width: 8px;
@@ -312,13 +245,6 @@
 .status-dot.active {
   background: var(--dr-success);
   animation: pulse-glow 1.5s ease-in-out infinite;
-}
-.status-dot.warning {
-  background: var(--dr-warning);
-  animation: pulse-glow 1s ease-in-out infinite;
-}
-.status-dot.idle {
-  background: var(--dr-text-muted);
 }
 
 /* ===== NOTICE BANNERS ===== */
@@ -534,41 +460,7 @@
   font-size: 0.875rem;
 }
 
-/* ===== MODAL OVERLAY ===== */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px) brightness(0.4);
-  -webkit-backdrop-filter: blur(8px) brightness(0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.25s ease;
-}
-.modal-content {
-  background: var(--dr-card);
-  border: 1px solid var(--dr-border);
-  border-radius: var(--radius-xl);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--dr-primary) 10%, transparent),
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 80px rgba(79, 144, 230, 0.05);
-  padding: 1.5rem;
-  max-width: 90vw;
-  max-height: 85vh;
-  overflow-y: auto;
-  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
 /* ===== 3D TRANSFORMS ===== */
-@keyframes tiltFloat {
-  0%, 100% { transform: perspective(600px) rotateX(0deg) rotateY(0deg) translateZ(0); }
-  50% { transform: perspective(600px) rotateX(1deg) rotateY(-0.5deg) translateZ(4px); }
-}
 @keyframes pressDepth {
   from { transform: perspective(600px) translateZ(8px) scale(1.02); }
   to { transform: perspective(600px) translateZ(0) scale(0.97); }
@@ -635,45 +527,6 @@
 }
 .page-exit {
   animation: slideOutLeft 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-/* Navigation tab 3D transform for sidebar sections */
-.nav-section-3d {
-  perspective: 600px;
-}
-
-/* 3D card reveal for whole page panels */
-.panel-reveal {
-  transform-style: preserve-3d;
-  animation: panelReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-@keyframes panelReveal {
-  from {
-    opacity: 0;
-    transform: perspective(800px) rotateX(3deg) translateY(12px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: perspective(800px) rotateX(0deg) translateY(0) scale(1);
-  }
-}
-
-/* ===== GLASS DEPTH LAYERS (multi-layer blur stacking) ===== */
-.modal-depth-overlay {
-  backdrop-filter: blur(8px) brightness(0.4);
-  -webkit-backdrop-filter: blur(8px) brightness(0.4);
-}
-.modal-depth-panel {
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--dr-primary) 10%, transparent),
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 80px rgba(79, 144, 230, 0.05);
-}
-.modal-depth-open #main-content {
-  filter: brightness(0.6) blur(1px);
-  transition: filter 0.25s ease;
 }
 
 /* ===== PRINT STYLES ===== */

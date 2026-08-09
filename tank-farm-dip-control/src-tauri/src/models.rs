@@ -34,41 +34,11 @@ pub struct UserSession {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoginRequest {
-    pub username: String,
-    pub password: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateUserRequest {
     pub username: String,
     pub password: String,
     pub full_name: String,
     pub role: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Role {
-    pub id: i64,
-    pub name: String,
-    pub description: Option<String>,
-    pub active: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Location {
-    pub id: i64,
-    pub name: String,
-    pub active: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Shift {
-    pub id: i64,
-    pub name: String,
-    pub start_time: String,
-    pub end_time: String,
-    pub active: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -309,13 +279,6 @@ pub struct DipReview {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ReviewDipRequest {
-    pub dip_id: i64,
-    pub action: String,
-    pub remarks: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DipRecheck {
     pub id: i64,
     pub original_dip_id: i64,
@@ -325,14 +288,6 @@ pub struct DipRecheck {
     pub reviewer_id: Option<i64>,
     pub final_decision: Option<String>,
     pub created_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RecheckDipRequest {
-    pub original_id: i64,
-    pub new_readings: CreateDipRequest,
-    pub operator_id: i64,
-    pub remarks: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -347,13 +302,6 @@ pub struct DipCorrection {
     pub approved_by: Option<i64>,
     pub status: String,
     pub created_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CorrectionRequest {
-    pub dip_record_id: i64,
-    pub fields: Vec<CorrectionField>,
-    pub reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -413,21 +361,6 @@ pub struct UpdateToleranceRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExceptionRecord {
-    pub id: i64,
-    pub dip_record_id: i64,
-    pub tank_id: i64,
-    pub exception_type: String,
-    pub severity: String,
-    pub actual_value: Option<String>,
-    pub expected_tolerance: Option<String>,
-    pub status: String,
-    pub resolution: Option<String>,
-    pub created_at: String,
-    pub resolved_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditLog {
     pub id: i64,
     pub timestamp: String,
@@ -476,12 +409,4 @@ pub struct BackupInfo {
     pub filename: String,
     pub created_at: String,
     pub file_size: u64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaginatedResponse<T> {
-    pub data: Vec<T>,
-    pub total: i64,
-    pub limit: i64,
-    pub offset: i64,
 }

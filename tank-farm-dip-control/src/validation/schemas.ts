@@ -82,18 +82,6 @@ export const tankStatusSchema = z.object({
 
 export type TankStatusFormData = z.infer<typeof tankStatusSchema>;
 
-export const toleranceSchema = z.object({
-  tank_id: z.number().nullable().optional(),
-  product_id: z.number().nullable().optional(),
-  location: z.string().optional(),
-  comparison_type: z.string().min(1, 'Comparison type is required'),
-  normal_limit: z.number().min(0, 'Normal limit must be non-negative'),
-  attention_limit: z.number().min(0, 'Attention limit must be non-negative'),
-  recheck_limit: z.number().min(0, 'Recheck limit must be non-negative'),
-});
-
-export type ToleranceFormData = z.infer<typeof toleranceSchema>;
-
 export const userSchema = z.object({
   username: z.string().min(1, 'Username is required'),
   full_name: z.string().min(1, 'Full name is required'),
@@ -102,14 +90,3 @@ export const userSchema = z.object({
 });
 
 export type UserFormData = z.infer<typeof userSchema>;
-
-export const correctionSchema = z.object({
-  gross_dip_mm: z.number().min(0, 'Gross dip must be positive').optional(),
-  water_dip_mm: z.number().min(0, 'Water dip must be non-negative').optional(),
-  sludge_dip_mm: z.number().min(0, 'Sludge dip must be non-negative').optional(),
-  temperature: z.number().nullable().optional(),
-  density: z.number().nullable().optional(),
-  remarks: z.string().optional(),
-});
-
-export type CorrectionFormData = z.infer<typeof correctionSchema>;

@@ -203,7 +203,6 @@ export type Page =
   | 'dip-verification'
   | 'shift-closing'
   | 'tank-status'
-  | 'tank-detail'
   | 'exceptions'
   | 'dip-history'
   | 'tank-trends'

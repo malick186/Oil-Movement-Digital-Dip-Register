@@ -83,18 +83,6 @@ export async function createDipRecord(data: {
   return invoke('create_dip_record', { data });
 }
 
-export async function updateDipRecord(id: number, data: Record<string, unknown>): Promise<DipRecord> {
-  return invoke('update_dip_record', { id, data });
-}
-
-export async function submitDipRecord(id: number): Promise<DipRecord> {
-  return invoke('submit_dip_record', { id });
-}
-
-export async function getDipRecord(id: number): Promise<DipRecordWithRelations> {
-  return invoke('get_dip_record', { id });
-}
-
 export async function listDipRecords(filters?: {
   date_from?: string;
   date_to?: string;
@@ -107,30 +95,10 @@ export async function listDipRecords(filters?: {
   return invoke('list_dip_records_with_relations', { filters });
 }
 
-export async function requestCorrection(id: number, fields: { field_name: string; old_value?: string; new_value: string }[], reason?: string): Promise<DipRecord> {
-  return invoke('request_correction', { id, fields, reason });
-}
-
-export async function checkDuplicateDip(tankId: number, date: string, time: string, shiftId: number): Promise<string> {
-  return invoke('check_duplicate_dip', { tankId, date, time, shiftId });
-}
-
 // ── Verification ──
 
 export async function reviewDip(dipId: number, action: string, remarks?: string): Promise<DipRecord> {
   return invoke('review_dip', { dipId, action, remarks });
-}
-
-export async function recheckDip(originalId: number, newReadings: Record<string, unknown>, operatorId: number, remarks?: string): Promise<DipRecord> {
-  return invoke('recheck_dip', { originalId, newReadings, operatorId, remarks });
-}
-
-export async function approveRecheck(recheckId: number, remarks?: string): Promise<DipRecord> {
-  return invoke('approve_recheck', { recheckId, remarks });
-}
-
-export async function approveCorrection(correctionId: number, remarks?: string): Promise<DipRecord> {
-  return invoke('approve_correction', { correctionId, remarks });
 }
 
 export async function getPendingReviews(): Promise<DipRecordWithRelations[]> {
@@ -178,10 +146,6 @@ export async function deleteProduct(id: number): Promise<void> {
   return invoke('deactivate_product', { id });
 }
 
-export async function getProduct(id: number): Promise<Product> {
-  return invoke('get_product', { id });
-}
-
 export async function listProducts(): Promise<Product[]> {
   return invoke('list_products');
 }
@@ -205,10 +169,6 @@ export async function deleteOperator(id: number): Promise<void> {
   return invoke('deactivate_operator', { id });
 }
 
-export async function getOperator(id: number): Promise<Operator> {
-  return invoke('get_operator', { id });
-}
-
 export async function listOperators(): Promise<Operator[]> {
   return invoke('list_operators');
 }
@@ -230,10 +190,6 @@ export async function updateTankStatus(id: number, name: string, displayOrder: n
 
 export async function deleteTankStatus(id: number): Promise<void> {
   return invoke('deactivate_tank_status', { id });
-}
-
-export async function getTankStatus(id: number): Promise<TankStatus> {
-  return invoke('get_tank_status', { id });
 }
 
 export async function listTankStatuses(): Promise<TankStatus[]> {
@@ -297,10 +253,6 @@ export async function getAppSettings(): Promise<Record<string, string>> {
     record[row.key] = row.value ?? '';
   }
   return record;
-}
-
-export async function updateAppSetting(key: string, value: string): Promise<void> {
-  return invoke('update_app_setting', { key, value });
 }
 
 export async function seedSampleData(): Promise<void> {
