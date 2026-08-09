@@ -20,9 +20,12 @@ import {
   ChevronRight,
   LogOut,
   Fuel,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
+import { useThemeStore } from '../store/themeStore';
 import ToastContainer from '../components/ToastContainer';
 import type { Page } from '../types';
 
@@ -80,10 +83,12 @@ const navSections: NavSection[] = [
 export default function MainLayout({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const isCollapsed = useAppStore((s) => s.sidebarCollapsed);
-  const toggleSidebar = useAppStore((s) => s.toggleSidebar);
   const currentPage = useAppStore((s) => s.currentPage);
   const setPage = useAppStore((s) => s.setPage);
+  const isCollapsed = useAppStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar);
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggle);
 
   const [indicatorStyle, setIndicatorStyle] = useState({ top: 0, height: 0 });
   const sidebarRef = useRef<HTMLElement>(null);
@@ -220,6 +225,19 @@ export default function MainLayout({ children }: { children: ReactNode }) {
             )}
           </div>
         )}
+
+        <div className={`flex-shrink-0 border-t border-dragon-border ${isCollapsed ? 'px-1 py-2' : 'px-3 py-2'}`}>
+          <button
+            onClick={toggleTheme}
+            className={`flex items-center gap-2 w-full text-dragon-text-secondary hover:text-dragon-text transition-colors rounded-lg hover:bg-dragon-accent/40 ${isCollapsed ? 'justify-center h-8' : 'px-2 py-1.5'}`}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            {!isCollapsed && (
+              <span className="text-[11px]">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+            )}
+          </button>
+        </div>
 
         <div className={`flex-shrink-0 border-t border-dragon-border ${isCollapsed ? 'px-1 py-2' : 'px-4 py-2'}`}>
           {isCollapsed ? (

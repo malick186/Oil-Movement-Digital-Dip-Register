@@ -3,6 +3,7 @@ import * as api from '../services/api';
 import type { Tank, DipRecordWithRelations } from '../types';
 import { Cylinder, TrendingUp, History } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { useToastStore } from '../store/toastStore';
 
 interface Props {
   tankId: number;
@@ -27,6 +28,7 @@ export default function TankDetail({ tankId, onBack }: Props) {
         setTank(tankData);
         if (dipData.length > 0) setLatestDip(dipData[0]);
       } catch {
+        useToastStore.getState().addToast('Failed to load tank details', 'error');
       } finally {
         setLoading(false);
       }
@@ -37,7 +39,9 @@ export default function TankDetail({ tankId, onBack }: Props) {
     try {
       const data = await api.listDipRecords({ tank_id: tankId, limit: 50 });
       setHistory(data);
-    } catch {}
+    } catch {
+      useToastStore.getState().addToast('Failed to load dip history', 'error');
+    }
   };
 
   useEffect(() => {
@@ -96,7 +100,7 @@ export default function TankDetail({ tankId, onBack }: Props) {
           Dip History
         </button>
         <button
-          onClick={() => useAppStore.getState().setPage('tank-trends')}
+          onClick={() => useAppStore.getState().navigateToTankTrends(tankId)}
           className="btn btn-secondary text-xs px-3 py-1.5"
         >
           <TrendingUp size={14} className="inline mr-1" />

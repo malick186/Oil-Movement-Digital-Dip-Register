@@ -5,12 +5,14 @@ import { productSchema, type ProductFormData } from '../validation/schemas';
 import type { Product } from '../types';
 import * as api from '../services/api';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { useToastStore } from '../store/toastStore';
 
 export default function ProductMaster() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ProductFormData>({
@@ -20,7 +22,9 @@ export default function ProductMaster() {
   const loadProducts = async () => {
     try {
       setProducts(await api.listProducts());
-    } catch {} finally {
+    } catch {
+      useToastStore.getState().addToast('Failed to load products', 'error');
+    } finally {
       setLoading(false);
     }
   };
@@ -28,6 +32,8 @@ export default function ProductMaster() {
   useEffect(() => { loadProducts(); }, []);
 
   const onSubmit = async (data: ProductFormData) => {
+    setSubmitting(true);
+    setMsg(null);
     try {
       if (editingId) {
         await api.updateProduct(editingId, data);
@@ -42,6 +48,9 @@ export default function ProductMaster() {
       loadProducts();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Operation failed');
+      useToastStore.getState().addToast('Failed to save product', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -98,7 +107,7 @@ export default function ProductMaster() {
               </div>
             </div>
             <div className="flex gap-2 mt-4">
-              <button type="submit" className="btn btn-primary">{editingId ? 'Update' : 'Create'}</button>
+              <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Saving...' : (editingId ? 'Update Product' : 'Create Product')}</button>
               <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="btn btn-secondary">Cancel</button>
             </div>
           </form>
@@ -131,7 +140,7 @@ export default function ProductMaster() {
                   <td className="px-2 py-1 text-center">
                     <div className="flex gap-1 justify-center">
                       <button onClick={() => handleEdit(p)} className="p-0.5 text-dragon-text-muted hover:text-dragon-primary"><Pencil size={13} /></button>
-                      <button onClick={async () => { try { await api.deleteProduct(p.id); loadProducts(); } catch {} }} className="p-0.5 text-dragon-text-muted hover:text-dragon-danger"><Trash2 size={13} /></button>
+                      <button onClick={async () => { if (!window.confirm('Are you sure you want to delete this product?')) return; try { await api.deleteProduct(p.id); loadProducts(); } catch { useToastStore.getState().addToast('Failed to delete product', 'error'); } }} className="p-0.5 text-dragon-text-muted hover:text-dragon-danger"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>

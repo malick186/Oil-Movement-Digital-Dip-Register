@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import * as api from '../services/api';
 import type { AuditLog } from '../types';
+import { useToastStore } from '../store/toastStore';
 
 export default function AuditLog() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -16,7 +17,9 @@ export default function AuditLog() {
       try {
         const data = await api.getAuditLogs({ limit: 500 });
         setLogs(data);
-      } catch {} finally {
+      } catch {
+        useToastStore.getState().addToast('Failed to load audit logs', 'error');
+      } finally {
         setLoading(false);
       }
     })();
@@ -30,7 +33,9 @@ export default function AuditLog() {
         limit: 500,
       });
       setLogs(data);
-    } catch {} finally {
+    } catch {
+      useToastStore.getState().addToast('Failed to filter audit logs', 'error');
+    } finally {
       setLoading(false);
     }
   };

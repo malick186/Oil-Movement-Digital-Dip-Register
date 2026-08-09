@@ -9,8 +9,11 @@ interface AppState {
   dashboardStats: DashboardStats | null;
   isLoadingStats: boolean;
   statsError: string | null;
+  pendingTankId: number | null;
   toggleSidebar: () => void;
   setPage: (page: Page) => void;
+  navigateToTankTrends: (tankId: number) => void;
+  clearPendingTankId: () => void;
   setCurrentShift: (shift: string) => void;
   loadDashboardStats: () => Promise<void>;
 }
@@ -22,11 +25,17 @@ export const useAppStore = create<AppState>((set) => ({
   dashboardStats: null,
   isLoadingStats: false,
   statsError: null,
+  pendingTankId: null,
 
   toggleSidebar: () =>
     set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 
   setPage: (page: Page) => set({ currentPage: page }),
+
+  navigateToTankTrends: (tankId: number) =>
+    set({ pendingTankId: tankId, currentPage: 'tank-trends' }),
+
+  clearPendingTankId: () => set({ pendingTankId: null }),
 
   setCurrentShift: (shift: string) => set({ currentShift: shift }),
 

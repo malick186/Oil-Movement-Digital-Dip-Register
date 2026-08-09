@@ -4,6 +4,7 @@ import * as api from '../services/api';
 import type { AttentionItem } from '../types';
 import TankDetail from './TankDetail';
 import { Activity, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { useToastStore } from '../store/toastStore';
 
 function getSeverity(item: AttentionItem, maxAttention: number): 'recheck' | 'attention' | 'normal' {
   const ga = Math.abs(item.gross_auto_difference ?? 0);
@@ -27,6 +28,7 @@ export default function TankStatus() {
         setAttentionItems(items);
       } catch {
         setAttentionItems([]);
+        useToastStore.getState().addToast('Failed to load tank status data', 'error');
       } finally {
         setLoading(false);
       }
@@ -85,7 +87,7 @@ export default function TankStatus() {
                 <tr
                   key={item.dip_id}
                   className="cursor-pointer"
-                  onClick={() => setSelectedTankId(item.dip_id)}
+                  onClick={() => setSelectedTankId(item.tank_id)}
                 >
                   <td className="px-3 py-2 font-medium text-dragon-text">{item.tank_no}</td>
                   <td className="px-3 py-2 text-dragon-text-secondary">{item.product_name}</td>

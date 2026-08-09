@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as api from '../services/api';
 import type { Exception } from '../types';
+import { useToastStore } from '../store/toastStore';
 
 export default function Exceptions() {
   const [exceptions, setExceptions] = useState<Exception[]>([]);
@@ -15,7 +16,7 @@ export default function Exceptions() {
       const data = await api.listExceptions();
       setExceptions(data);
     } catch {
-      // fail silently
+      useToastStore.getState().addToast('Failed to load exceptions', 'error');
     } finally {
       setLoading(false);
     }
@@ -34,7 +35,7 @@ export default function Exceptions() {
       setSelectedId(null);
       loadExceptions();
     } catch {
-      // fail silently
+      useToastStore.getState().addToast('Failed to resolve exception', 'error');
     } finally {
       setResolving(false);
     }

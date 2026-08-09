@@ -5,11 +5,13 @@ import { userSchema, type UserFormData } from '../validation/schemas';
 import type { User } from '../types';
 import * as api from '../services/api';
 import { Plus, UserCheck, UserX } from 'lucide-react';
+import { useToastStore } from '../store/toastStore';
 
 export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<UserFormData>({
@@ -17,12 +19,14 @@ export default function Users() {
   });
 
   const loadUsers = async () => {
-    try { setUsers(await api.listUsers()); } catch {} finally { setLoading(false); }
+    try { setUsers(await api.listUsers()); } catch { useToastStore.getState().addToast('Failed to load users', 'error'); } finally { setLoading(false); }
   };
 
   useEffect(() => { loadUsers(); }, []);
 
   const onSubmit = async (data: UserFormData) => {
+    setSubmitting(true);
+    setMsg(null);
     try {
       await api.createUser(data);
       setMsg('User created successfully');
@@ -31,6 +35,9 @@ export default function Users() {
       loadUsers();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Failed to create user');
+      useToastStore.getState().addToast('Failed to create user', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -38,7 +45,9 @@ export default function Users() {
     try {
       await api.toggleUserActive(userId);
       loadUsers();
-    } catch {}
+    } catch {
+      useToastStore.getState().addToast('Failed to toggle user active status', 'error');
+    }
   };
 
   return (
@@ -83,7 +92,7 @@ export default function Users() {
               </div>
             </div>
             <div className="flex gap-2 mt-4">
-              <button type="submit" className="btn btn-primary">Create User</button>
+              <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Creating...' : 'Create User'}</button>
               <button type="button" onClick={() => { setShowForm(false); }} className="btn btn-secondary">Cancel</button>
             </div>
           </form>

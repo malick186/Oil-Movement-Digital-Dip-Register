@@ -13,6 +13,7 @@ import {
 export default function Dashboard() {
   const dashboardStats = useAppStore((s) => s.dashboardStats);
   const isLoadingStats = useAppStore((s) => s.isLoadingStats);
+  const statsError = useAppStore((s) => s.statsError);
   const loadDashboardStats = useAppStore((s) => s.loadDashboardStats);
 
   useEffect(() => {
@@ -103,6 +104,10 @@ export default function Dashboard() {
           </span>
         </div>
       </div>
+
+      {statsError && (
+        <div className="notice-banner error mb-3">{statsError}</div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {cards.map((card) => (

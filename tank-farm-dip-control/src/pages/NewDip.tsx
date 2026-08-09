@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { dipEntrySchema, type DipEntryFormData } from '../validation/schemas';
 import type { Tank, Product, Operator, TankStatus, ShiftStatus } from '../types';
 import * as api from '../services/api';
+import { useToastStore } from '../store/toastStore';
 
 export default function NewDip() {
   const [tanks, setTanks] = useState<Tank[]>([]);
@@ -55,6 +56,7 @@ export default function NewDip() {
         }
       } catch {
         setErrorMsg('Failed to load reference data');
+        useToastStore.getState().addToast('Failed to load reference data', 'error');
       } finally {
         setLoading(false);
       }

@@ -7,6 +7,7 @@ use crate::models::DashboardStats;
 #[derive(Debug, Clone, Serialize)]
 pub struct AttentionItem {
     pub dip_id: i64,
+    pub tank_id: i64,
     pub record_number: String,
     pub tank_no: String,
     pub product_name: String,
@@ -35,7 +36,7 @@ pub fn get_attention_list(
         .unwrap_or(5.0);
 
     let mut stmt = conn.prepare(
-        "SELECT dr.id, dr.record_number, COALESCE(t.tank_no, ''), COALESCE(p.name, ''),
+        "SELECT dr.id, COALESCE(dr.tank_id, 0), dr.record_number, COALESCE(t.tank_no, ''), COALESCE(p.name, ''),
                 dr.gross_dip_mm, dr.auto_dip_mm, dr.radar_dip_mm,
                 dr.gross_auto_difference, dr.gross_radar_difference,
                 COALESCE(ts.name, ''), dr.review_status,
@@ -54,17 +55,18 @@ pub fn get_attention_list(
     let items = stmt.query_map(params![max_attention], |row| {
         Ok(AttentionItem {
             dip_id: row.get(0)?,
-            record_number: row.get(1)?,
-            tank_no: row.get(2)?,
-            product_name: row.get(3)?,
-            gross_dip_mm: row.get(4)?,
-            auto_dip_mm: row.get(5)?,
-            radar_dip_mm: row.get(6)?,
-            gross_auto_difference: row.get(7)?,
-            gross_radar_difference: row.get(8)?,
-            tank_status_name: row.get(9)?,
-            review_status: row.get(10)?,
-            last_gauged: row.get(11)?,
+            tank_id: row.get(1)?,
+            record_number: row.get(2)?,
+            tank_no: row.get(3)?,
+            product_name: row.get(4)?,
+            gross_dip_mm: row.get(5)?,
+            auto_dip_mm: row.get(6)?,
+            radar_dip_mm: row.get(7)?,
+            gross_auto_difference: row.get(8)?,
+            gross_radar_difference: row.get(9)?,
+            tank_status_name: row.get(10)?,
+            review_status: row.get(11)?,
+            last_gauged: row.get(12)?,
         })
     }).map_err(|e| e.to_string())?
     .collect::<Result<Vec<_>, _>>()

@@ -5,12 +5,14 @@ import { tankSchema, type TankFormData } from '../validation/schemas';
 import type { Tank } from '../types';
 import * as api from '../services/api';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { useToastStore } from '../store/toastStore';
 
 export default function TankMaster() {
   const [tanks, setTanks] = useState<Tank[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const {
@@ -27,7 +29,7 @@ export default function TankMaster() {
       const data = await api.listTanks();
       setTanks(data);
     } catch {
-      // fail silently
+      useToastStore.getState().addToast('Failed to load tanks', 'error');
     } finally {
       setLoading(false);
     }
@@ -38,6 +40,8 @@ export default function TankMaster() {
   }, []);
 
   const onSubmit = async (data: TankFormData) => {
+    setSubmitting(true);
+    setMsg(null);
     try {
       if (editingId) {
         await api.updateTank(editingId, data);
@@ -52,6 +56,9 @@ export default function TankMaster() {
       loadTanks();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Operation failed');
+      useToastStore.getState().addToast('Failed to save tank', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -185,8 +192,8 @@ export default function TankMaster() {
               </div>
             </div>
             <div className="flex gap-2 mt-4">
-              <button type="submit" className="btn btn-primary">
-                {editingId ? 'Update' : 'Create'}
+              <button type="submit" className="btn btn-primary" disabled={submitting}>
+                {submitting ? 'Saving...' : (editingId ? 'Update Tank' : 'Create Tank')}
               </button>
               <button
                 type="button"
@@ -240,7 +247,7 @@ export default function TankMaster() {
                       <button onClick={() => handleEdit(t)} className="p-0.5 text-dragon-text-muted hover:text-dragon-primary transition-colors">
                         <Pencil size={13} />
                       </button>
-                      <button onClick={async () => { try { await api.deleteTank(t.id); loadTanks(); } catch {} }} className="p-0.5 text-dragon-text-muted hover:text-dragon-danger transition-colors">
+                      <button onClick={async () => { if (!window.confirm('Are you sure you want to delete this tank?')) return; try { await api.deleteTank(t.id); loadTanks(); } catch { useToastStore.getState().addToast('Failed to delete tank', 'error'); } }} className="p-0.5 text-dragon-text-muted hover:text-dragon-danger transition-colors">
                         <Trash2 size={13} />
                       </button>
                     </div>

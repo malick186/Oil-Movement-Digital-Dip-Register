@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import type { DipRecordWithRelations } from '../types';
 import * as api from '../services/api';
+import { useToastStore } from '../store/toastStore';
 
 export default function DipVerification() {
   const [records, setRecords] = useState<DipRecordWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<DipRecordWithRelations | null>(null);
 
   const loadRecords = async () => {
@@ -15,6 +17,7 @@ export default function DipVerification() {
       setRecords(data);
     } catch {
       setActionMsg('Failed to load pending reviews');
+      useToastStore.getState().addToast('Failed to load pending reviews', 'error');
     } finally {
       setLoading(false);
     }
@@ -25,12 +28,16 @@ export default function DipVerification() {
   }, []);
 
   const handleReview = async (id: number, action: string) => {
+    setReviewingId(id);
     try {
       await api.reviewDip(id, action);
       setActionMsg(`Record ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'marked for recheck'} successfully`);
       loadRecords();
     } catch (err) {
       setActionMsg(err instanceof Error ? err.message : 'Action failed');
+      useToastStore.getState().addToast('Failed to review dip record', 'error');
+    } finally {
+      setReviewingId(null);
     }
   };
 
@@ -98,18 +105,21 @@ export default function DipVerification() {
                       </button>
                       <button
                         onClick={() => handleReview(r.id, 'approve')}
+                        disabled={reviewingId !== null}
                         className="btn btn-primary btn-sm"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => handleReview(r.id, 'reject')}
+                        disabled={reviewingId !== null}
                         className="btn btn-danger btn-sm"
                       >
                         Reject
                       </button>
                       <button
                         onClick={() => handleReview(r.id, 'recheck')}
+                        disabled={reviewingId !== null}
                         className="btn btn-secondary btn-sm"
                       >
                         Recheck

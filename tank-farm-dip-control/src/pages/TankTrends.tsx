@@ -6,6 +6,8 @@ import {
   Tooltip, ResponsiveContainer, Area, ComposedChart,
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
+import { useAppStore } from '../store/appStore';
+import { useToastStore } from '../store/toastStore';
 
 export default function TankTrends() {
   const [tanks, setTanks] = useState<Tank[]>([]);
@@ -15,13 +17,19 @@ export default function TankTrends() {
   const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
+    const pendingId = useAppStore.getState().pendingTankId;
+    if (pendingId) useAppStore.getState().clearPendingTankId();
+
     (async () => {
       try {
         const t = await api.listActiveTanks();
         setTanks(t);
+        if (pendingId && t.some((tank) => tank.id === pendingId)) {
+          setSelectedTank(pendingId);
+        }
       } catch {
-        // fail silently
-      } finally {
+          useToastStore.getState().addToast('Failed to load tank data', 'error');
+        } finally {
         setLoading(false);
       }
     })();
@@ -50,6 +58,7 @@ export default function TankTrends() {
         requestAnimationFrame(() => setAnimate(true));
       } catch {
         setRecords([]);
+        useToastStore.getState().addToast('Failed to load dip records', 'error');
       } finally {
         setLoading(false);
       }

@@ -5,12 +5,14 @@ import { tankStatusSchema, type TankStatusFormData } from '../validation/schemas
 import type { TankStatus } from '../types';
 import * as api from '../services/api';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { useToastStore } from '../store/toastStore';
 
 export default function TankStatusMaster() {
   const [statuses, setStatuses] = useState<TankStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<TankStatusFormData>({
@@ -18,17 +20,24 @@ export default function TankStatusMaster() {
   });
 
   const load = async () => {
-    try { setStatuses(await api.listTankStatuses()); } catch {} finally { setLoading(false); }
+    try { setStatuses(await api.listTankStatuses()); } catch { useToastStore.getState().addToast('Failed to load tank statuses', 'error'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
 
   const onSubmit = async (data: TankStatusFormData) => {
+    setSubmitting(true);
+    setMsg(null);
     try {
       if (editingId) { await api.updateTankStatus(editingId, data.name, data.display_order, data.allow_custom ? 1 : 0); setMsg('Status updated'); }
       else { await api.createTankStatus(data.name, data.display_order, data.allow_custom ? 1 : 0); setMsg('Status created'); }
       setShowForm(false); setEditingId(null); reset(); load();
-    } catch (err) { setMsg(err instanceof Error ? err.message : 'Operation failed'); }
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'Operation failed');
+      useToastStore.getState().addToast('Failed to save status', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEdit = (s: TankStatus) => {
@@ -68,7 +77,7 @@ export default function TankStatusMaster() {
               </div>
             </div>
             <div className="flex gap-2 mt-4">
-              <button type="submit" className="btn btn-primary">{editingId ? 'Update' : 'Create'}</button>
+              <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Saving...' : (editingId ? 'Update Status' : 'Create Status')}</button>
               <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="btn btn-secondary">Cancel</button>
             </div>
           </form>
@@ -101,7 +110,7 @@ export default function TankStatusMaster() {
                   <td className="px-2 py-1 text-center">
                     <div className="flex gap-1 justify-center">
                       <button onClick={() => handleEdit(s)} className="p-0.5 text-dragon-text-muted hover:text-dragon-primary"><Pencil size={13} /></button>
-                      <button onClick={async () => { try { await api.deleteTankStatus(s.id); load(); } catch {} }} className="p-0.5 text-dragon-text-muted hover:text-dragon-danger"><Trash2 size={13} /></button>
+                      <button onClick={async () => { if (!window.confirm('Are you sure you want to delete this status?')) return; try { await api.deleteTankStatus(s.id); load(); } catch { useToastStore.getState().addToast('Failed to delete status', 'error'); } }} className="p-0.5 text-dragon-text-muted hover:text-dragon-danger"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>

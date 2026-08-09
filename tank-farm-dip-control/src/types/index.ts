@@ -183,6 +183,7 @@ export interface ShiftStatus {
 
 export interface AttentionItem {
   dip_id: number;
+  tank_id: number;
   record_number: string;
   tank_no: string;
   product_name: string;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as api from '../services/api';
 import { Upload, Download } from 'lucide-react';
+import { useToastStore } from '../store/toastStore';
 
 interface BackupInfo {
   path: string;
@@ -13,11 +14,14 @@ export default function BackupRestore() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const loadBackups = async () => {
     try {
       setBackups(await api.getBackupInfo());
-    } catch {} finally {
+    } catch {
+      useToastStore.getState().addToast('Failed to load backups', 'error');
+    } finally {
       setLoading(false);
     }
   };
@@ -33,6 +37,7 @@ export default function BackupRestore() {
       loadBackups();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Backup failed');
+      useToastStore.getState().addToast('Failed to create backup', 'error');
     } finally {
       setCreating(false);
     }
@@ -40,11 +45,15 @@ export default function BackupRestore() {
 
   const handleRestore = async (path: string) => {
     if (!confirm('Restore backup? This may overwrite current data.')) return;
+    setRestoring(true);
     try {
       await api.restoreBackup(path);
       setMsg('Backup restored successfully');
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Restore failed');
+      useToastStore.getState().addToast('Failed to restore backup', 'error');
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -100,11 +109,12 @@ export default function BackupRestore() {
                   <td className="px-2 py-1 text-dragon-text-secondary font-mono text-xs truncate max-w-xs">{b.path}</td>
                   <td className="px-2 py-1 text-right text-dragon-text-secondary">{formatSize(b.size)}</td>
                   <td className="px-2 py-1 text-center">
-                    <button
-                      onClick={() => handleRestore(b.path)}
-                      className="btn btn-sm btn-secondary flex items-center gap-1 mx-auto"
-                    >
-                      <Upload size={12} /> Restore
+                      <button
+                        onClick={() => handleRestore(b.path)}
+                        disabled={restoring}
+                        className="btn btn-sm btn-secondary flex items-center gap-1 mx-auto"
+                      >
+                        <Upload size={12} /> {restoring ? 'Restoring...' : 'Restore'}
                     </button>
                   </td>
                 </tr>

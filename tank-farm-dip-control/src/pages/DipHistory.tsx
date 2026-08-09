@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { DipRecordWithRelations } from '../types';
 import * as api from '../services/api';
 import DragTable, { type ColumnDef } from '../components/DragTable';
+import { useToastStore } from '../store/toastStore';
 
 const columns: ColumnDef<DipRecordWithRelations>[] = [
   { key: 'record_number', label: 'Record #' },
@@ -73,6 +74,7 @@ export default function DipHistory() {
         const data = await api.listDipRecords({ limit: 500 });
         setRecords(data);
       } catch {
+        useToastStore.getState().addToast('Failed to load dip history', 'error');
       } finally {
         setLoading(false);
       }
@@ -89,6 +91,7 @@ export default function DipHistory() {
       });
       setRecords(data);
     } catch {
+      useToastStore.getState().addToast('Failed to filter dip records', 'error');
     } finally {
       setLoading(false);
     }
