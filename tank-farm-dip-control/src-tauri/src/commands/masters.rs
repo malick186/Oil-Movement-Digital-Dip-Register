@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use crate::models::{
     CreateOperatorRequest, CreateProductRequest, CreateTankRequest, Operator, Product, Tank,
-    TankStatus, UserSession,
+    TankStatus, UpdateTankRequest, UserSession,
 };
 use crate::util::{audit_log, get_current_user_id};
 
@@ -147,7 +147,7 @@ pub fn create_tank(
 #[tauri::command]
 pub fn update_tank(
     id: i64,
-    data: CreateTankRequest,
+    data: UpdateTankRequest,
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Tank, String> {
@@ -159,13 +159,28 @@ pub fn update_tank(
     };
 
     conn.execute(
-        "UPDATE tanks SET tank_no=?1, location=?2, tank_farm=?3, normal_product=?4,
-         current_product=?5, reference_point=?6, tank_type=?7, roof_type=?8,
-         safe_fill_height=?9, min_operating_level=?10, ref_gauge_height=?11,
-         datum_height=?12, working_capacity=?13, radar_available=?14,
-         auto_dip_available=?15, water_dip_applicable=?16, sludge_dip_applicable=?17,
-         remarks=?18, updated_at=datetime('now')
-         WHERE id=?19",
+        "UPDATE tanks SET
+         tank_no=COALESCE(?1, tank_no),
+         location=COALESCE(?2, location),
+         tank_farm=COALESCE(?3, tank_farm),
+         normal_product=COALESCE(?4, normal_product),
+         current_product=COALESCE(?5, current_product),
+         reference_point=COALESCE(?6, reference_point),
+         tank_type=COALESCE(?7, tank_type),
+         roof_type=COALESCE(?8, roof_type),
+         safe_fill_height=COALESCE(?9, safe_fill_height),
+         min_operating_level=COALESCE(?10, min_operating_level),
+         ref_gauge_height=COALESCE(?11, ref_gauge_height),
+         datum_height=COALESCE(?12, datum_height),
+         working_capacity=COALESCE(?13, working_capacity),
+         radar_available=COALESCE(?14, radar_available),
+         auto_dip_available=COALESCE(?15, auto_dip_available),
+         water_dip_applicable=COALESCE(?16, water_dip_applicable),
+         sludge_dip_applicable=COALESCE(?17, sludge_dip_applicable),
+         active=COALESCE(?18, active),
+         remarks=COALESCE(?19, remarks),
+         updated_at=datetime('now')
+         WHERE id=?20",
         params![
             data.tank_no,
             data.location,
@@ -180,10 +195,11 @@ pub fn update_tank(
             data.ref_gauge_height,
             data.datum_height,
             data.working_capacity,
-            data.radar_available.unwrap_or(0),
-            data.auto_dip_available.unwrap_or(0),
-            data.water_dip_applicable.unwrap_or(0),
-            data.sludge_dip_applicable.unwrap_or(0),
+            data.radar_available,
+            data.auto_dip_available,
+            data.water_dip_applicable,
+            data.sludge_dip_applicable,
+            data.active,
             data.remarks,
             id,
         ],
@@ -196,11 +212,11 @@ pub fn update_tank(
         &user_role,
         "update_tank",
         None,
-        Some(&data.tank_no),
+        data.tank_no.as_deref(),
         None,
         None,
         None,
-        Some(&format!("Tank {} updated", data.tank_no)),
+        Some(&format!("Tank updated")),
     );
 
     conn.query_row(
@@ -280,8 +296,8 @@ pub fn create_product(
     };
 
     conn.execute(
-        "INSERT INTO products (name, code, category, remarks) VALUES (?1, ?2, ?3, ?4)",
-        params![data.name, data.code, data.category, data.remarks],
+        "INSERT INTO products (name, code, category, active, remarks) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![data.name, data.code, data.category, data.active.unwrap_or(1), data.remarks],
     )
     .map_err(|e| format!("Failed to create product: {}", e))?;
 
@@ -332,8 +348,8 @@ pub fn update_product(
     };
 
     conn.execute(
-        "UPDATE products SET name=?1, code=?2, category=?3, remarks=?4 WHERE id=?5",
-        params![data.name, data.code, data.category, data.remarks, id],
+        "UPDATE products SET name=?1, code=?2, category=?3, active=COALESCE(?4, active), remarks=?5 WHERE id=?6",
+        params![data.name, data.code, data.category, data.active, data.remarks, id],
     )
     .map_err(|e| format!("Failed to update product: {}", e))?;
 
@@ -440,14 +456,15 @@ pub fn create_operator(
     };
 
     conn.execute(
-        "INSERT INTO operators (employee_id, name, designation, location, shift_group, remarks)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO operators (employee_id, name, designation, location, shift_group, active, remarks)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             data.employee_id,
             data.name,
             data.designation,
             data.location,
             data.shift_group,
+            data.active.unwrap_or(1),
             data.remarks,
         ],
     )
@@ -503,8 +520,8 @@ pub fn update_operator(
     };
 
     conn.execute(
-        "UPDATE operators SET employee_id=?1, name=?2, designation=?3, location=?4, shift_group=?5, remarks=?6 WHERE id=?7",
-        params![data.employee_id, data.name, data.designation, data.location, data.shift_group, data.remarks, id],
+        "UPDATE operators SET employee_id=?1, name=?2, designation=?3, location=?4, shift_group=?5, active=COALESCE(?6, active), remarks=?7 WHERE id=?8",
+        params![data.employee_id, data.name, data.designation, data.location, data.shift_group, data.active, data.remarks, id],
     )
     .map_err(|e| format!("Failed to update operator: {}", e))?;
 

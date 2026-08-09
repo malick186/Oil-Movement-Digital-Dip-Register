@@ -71,11 +71,11 @@ export default function TankMaster() {
       ref_gauge_height: tank.ref_gauge_height,
       datum_height: tank.datum_height,
       working_capacity: tank.working_capacity,
-      radar_available: tank.radar_available,
-      auto_dip_available: tank.auto_dip_available,
-      water_dip_applicable: tank.water_dip_applicable,
-      sludge_dip_applicable: tank.sludge_dip_applicable,
-      active: tank.active,
+      radar_available: !!tank.radar_available,
+      auto_dip_available: !!tank.auto_dip_available,
+      water_dip_applicable: !!tank.water_dip_applicable,
+      sludge_dip_applicable: !!tank.sludge_dip_applicable,
+      active: !!tank.active,
       remarks: tank.remarks,
     });
     setShowForm(true);

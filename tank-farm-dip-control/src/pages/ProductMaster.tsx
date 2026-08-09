@@ -47,7 +47,7 @@ export default function ProductMaster() {
 
   const handleEdit = (p: Product) => {
     setEditingId(p.id);
-    reset({ name: p.name, code: p.code, category: p.category, active: p.active, remarks: p.remarks });
+    reset({ name: p.name, code: p.code, category: p.category, active: !!p.active, remarks: p.remarks });
     setShowForm(true);
   };
 

@@ -52,8 +52,15 @@ pub fn update_tolerance(
 
     let tolerance_id = if let Some(id) = data.id {
         conn.execute(
-            "UPDATE tolerance_settings SET tank_id=?1, product_id=?2, location=?3, comparison_type=?4,
-             normal_limit=?5, attention_limit=?6, recheck_limit=?7 WHERE id=?8",
+            "UPDATE tolerance_settings SET
+             tank_id=COALESCE(?1, tank_id),
+             product_id=COALESCE(?2, product_id),
+             location=COALESCE(?3, location),
+             comparison_type=COALESCE(?4, comparison_type),
+             normal_limit=COALESCE(?5, normal_limit),
+             attention_limit=COALESCE(?6, attention_limit),
+             recheck_limit=COALESCE(?7, recheck_limit)
+             WHERE id=?8",
             params![
                 data.tank_id,
                 data.product_id,
@@ -96,8 +103,11 @@ pub fn update_tolerance(
         None,
         None,
         Some(&format!(
-            "Tolerance updated: {} (normal: {}, attention: {}, recheck: {})",
-            data.comparison_type, data.normal_limit, data.attention_limit, data.recheck_limit
+            "Tolerance updated: {} (normal: {:?}, attention: {:?}, recheck: {:?})",
+            data.comparison_type.as_deref().unwrap_or("?"),
+            data.normal_limit,
+            data.attention_limit,
+            data.recheck_limit
         )),
     );
 

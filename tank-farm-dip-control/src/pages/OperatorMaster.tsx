@@ -33,7 +33,7 @@ export default function OperatorMaster() {
 
   const handleEdit = (o: Operator) => {
     setEditingId(o.id);
-    reset({ employee_id: o.employee_id, name: o.name, designation: o.designation, location: o.location, shift_group: o.shift_group, active: o.active, remarks: o.remarks });
+    reset({ employee_id: o.employee_id, name: o.name, designation: o.designation, location: o.location, shift_group: o.shift_group, active: !!o.active, remarks: o.remarks });
     setShowForm(true);
   };
 

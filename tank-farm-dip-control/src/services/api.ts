@@ -291,7 +291,12 @@ export async function updateTolerance(id: number, data: Partial<ToleranceSetting
 }
 
 export async function getAppSettings(): Promise<Record<string, string>> {
-  return invoke('get_app_settings');
+  const rows = await invoke<Array<{ key: string; value: string | null }>>('get_app_settings');
+  const record: Record<string, string> = {};
+  for (const row of rows) {
+    record[row.key] = row.value ?? '';
+  }
+  return record;
 }
 
 export async function updateAppSetting(key: string, value: string): Promise<void> {

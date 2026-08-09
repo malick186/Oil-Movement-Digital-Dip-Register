@@ -1,4 +1,18 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+fn bool_int<'de, D: Deserializer<'de>>(d: D) -> Result<Option<i64>, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum BoolOrInt {
+        Bool(bool),
+        Int(i64),
+    }
+    match Option::<BoolOrInt>::deserialize(d)? {
+        None => Ok(None),
+        Some(BoolOrInt::Bool(b)) => Ok(Some(b as i64)),
+        Some(BoolOrInt::Int(n)) => Ok(Some(n)),
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -98,10 +112,42 @@ pub struct CreateTankRequest {
     pub ref_gauge_height: Option<f64>,
     pub datum_height: Option<f64>,
     pub working_capacity: Option<f64>,
+    #[serde(default, deserialize_with = "bool_int")]
     pub radar_available: Option<i64>,
+    #[serde(default, deserialize_with = "bool_int")]
     pub auto_dip_available: Option<i64>,
+    #[serde(default, deserialize_with = "bool_int")]
     pub water_dip_applicable: Option<i64>,
+    #[serde(default, deserialize_with = "bool_int")]
     pub sludge_dip_applicable: Option<i64>,
+    pub remarks: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateTankRequest {
+    pub tank_no: Option<String>,
+    pub location: Option<String>,
+    pub tank_farm: Option<String>,
+    pub normal_product: Option<String>,
+    pub current_product: Option<String>,
+    pub reference_point: Option<String>,
+    pub tank_type: Option<String>,
+    pub roof_type: Option<String>,
+    pub safe_fill_height: Option<f64>,
+    pub min_operating_level: Option<f64>,
+    pub ref_gauge_height: Option<f64>,
+    pub datum_height: Option<f64>,
+    pub working_capacity: Option<f64>,
+    #[serde(default, deserialize_with = "bool_int")]
+    pub radar_available: Option<i64>,
+    #[serde(default, deserialize_with = "bool_int")]
+    pub auto_dip_available: Option<i64>,
+    #[serde(default, deserialize_with = "bool_int")]
+    pub water_dip_applicable: Option<i64>,
+    #[serde(default, deserialize_with = "bool_int")]
+    pub sludge_dip_applicable: Option<i64>,
+    #[serde(default, deserialize_with = "bool_int")]
+    pub active: Option<i64>,
     pub remarks: Option<String>,
 }
 
@@ -120,6 +166,8 @@ pub struct CreateProductRequest {
     pub name: String,
     pub code: Option<String>,
     pub category: Option<String>,
+    #[serde(default, deserialize_with = "bool_int")]
+    pub active: Option<i64>,
     pub remarks: Option<String>,
 }
 
@@ -142,6 +190,8 @@ pub struct CreateOperatorRequest {
     pub designation: Option<String>,
     pub location: Option<String>,
     pub shift_group: Option<String>,
+    #[serde(default, deserialize_with = "bool_int")]
+    pub active: Option<i64>,
     pub remarks: Option<String>,
 }
 
@@ -356,10 +406,10 @@ pub struct UpdateToleranceRequest {
     pub tank_id: Option<i64>,
     pub product_id: Option<i64>,
     pub location: Option<String>,
-    pub comparison_type: String,
-    pub normal_limit: f64,
-    pub attention_limit: f64,
-    pub recheck_limit: f64,
+    pub comparison_type: Option<String>,
+    pub normal_limit: Option<f64>,
+    pub attention_limit: Option<f64>,
+    pub recheck_limit: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
