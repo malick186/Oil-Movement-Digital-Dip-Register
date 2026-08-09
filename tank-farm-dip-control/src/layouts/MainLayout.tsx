@@ -26,6 +26,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
 import { useThemeStore } from '../store/themeStore';
+import { APP_VERSION } from '../version';
 import ToastContainer from '../components/ToastContainer';
 import type { Page } from '../types';
 
@@ -155,7 +156,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 flex flex-col gap-0.5 py-3 overflow-y-auto content-scroll nav-3d">
           {navSections.map((section) => (
-            <div key={section.heading} className="mb-1">
+            <div key={section.heading} className="mb-1" style={{ transformStyle: 'preserve-3d' }}>
               {!isCollapsed && (
                 <div className="px-3 py-1 text-[10px] font-semibold tracking-wider text-dragon-text-muted uppercase">
                   {section.heading}
@@ -226,24 +227,11 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        <div className={`flex-shrink-0 border-t border-dragon-border ${isCollapsed ? 'px-1 py-2' : 'px-3 py-2'}`}>
-          <button
-            onClick={toggleTheme}
-            className={`flex items-center gap-2 w-full text-dragon-text-secondary hover:text-dragon-text transition-colors rounded-lg hover:bg-dragon-accent/40 ${isCollapsed ? 'justify-center h-8' : 'px-2 py-1.5'}`}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-            {!isCollapsed && (
-              <span className="text-[11px]">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-            )}
-          </button>
-        </div>
-
         <div className={`flex-shrink-0 border-t border-dragon-border ${isCollapsed ? 'px-1 py-2' : 'px-4 py-2'}`}>
           {isCollapsed ? (
-            <span className="text-[10px] font-semibold text-dragon-text-muted block text-center">0.1.4</span>
+            <span className="text-[10px] font-semibold text-dragon-text-muted block text-center">{APP_VERSION}</span>
           ) : (
-            <span className="text-[10px] font-semibold text-dragon-text-muted">v0.1.4</span>
+            <span className="text-[10px] font-semibold text-dragon-text-muted">v{APP_VERSION}</span>
           )}
         </div>
       </aside>
@@ -263,6 +251,17 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           </div>
           {user && (
             <div className="flex items-center gap-3 text-xs text-dragon-text-secondary" style={{ WebkitAppRegion: 'no-drag' } as any}>
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-dragon-border bg-dragon-accent/30 hover:bg-dragon-accent/50 transition-all text-dragon-text-secondary hover:text-dragon-text"
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {theme === 'dark' ? (
+                  <><Sun size={13} /><span className="text-[10px] font-medium">Light</span></>
+                ) : (
+                  <><Moon size={13} /><span className="text-[10px] font-medium">Dark</span></>
+                )}
+              </button>
               <span>{user.full_name}</span>
               <span className="text-dragon-text-muted">|</span>
               <span className="capitalize">{user.role}</span>

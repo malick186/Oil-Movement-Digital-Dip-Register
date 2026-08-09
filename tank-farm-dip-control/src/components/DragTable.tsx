@@ -34,7 +34,7 @@ function loadColumnOrder(key: string, cols: ColumnDef<any>[]): ColumnDef<any>[] 
 export default function DragTable<T extends Record<string, any>>({ columns: initialColumns, data, storageKey, rowKey }: Props<T>) {
   const [columns, setColumns] = useState<ColumnDef<T>[]>(() => loadColumnOrder(storageKey, initialColumns));
   const dragCol = useRef<string | null>(null);
-  const dragOverCol = useRef<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const handleDragStart = useCallback((colKey: string) => {
     dragCol.current = colKey;
@@ -42,14 +42,19 @@ export default function DragTable<T extends Record<string, any>>({ columns: init
 
   const handleDragOver = useCallback((e: React.DragEvent, colKey: string) => {
     e.preventDefault();
-    dragOverCol.current = colKey;
+    setDragOverCol(colKey);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    dragCol.current = null;
+    setDragOverCol(null);
   }, []);
 
   const handleDrop = useCallback((colKey: string) => {
     const from = dragCol.current;
     const to = colKey;
     dragCol.current = null;
-    dragOverCol.current = null;
+    setDragOverCol(null);
     if (!from || from === to) return;
 
     setColumns((prev) => {
@@ -66,7 +71,7 @@ export default function DragTable<T extends Record<string, any>>({ columns: init
   }, [storageKey]);
 
   return (
-    <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
+    <div className="glass-panel rounded-xl overflow-auto flex-1">
       <table className="data-table w-full text-xs">
         <thead className="sticky top-0">
           <tr>
@@ -76,9 +81,10 @@ export default function DragTable<T extends Record<string, any>>({ columns: init
                 draggable
                 onDragStart={() => handleDragStart(col.key)}
                 onDragOver={(e) => handleDragOver(e, col.key)}
+                onDragEnd={handleDragEnd}
                 onDrop={() => handleDrop(col.key)}
                 className={`text-left px-2 py-1.5 font-medium text-dragon-text-secondary whitespace-nowrap cursor-grab active:cursor-grabbing select-none transition-colors ${
-                  dragOverCol.current === col.key ? 'bg-dragon-primary/10' : ''
+                  dragOverCol === col.key ? 'bg-dragon-primary/10' : ''
                 }`}
                 style={col.width ? { width: col.width } : undefined}
               >

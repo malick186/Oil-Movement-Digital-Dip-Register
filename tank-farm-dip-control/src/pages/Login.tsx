@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginFormData } from '../validation/schemas';
 import { useAuthStore } from '../store/authStore';
+import { APP_VERSION } from '../version';
 import { Fuel, AlertCircle } from 'lucide-react';
 
 export default function Login() {
@@ -108,7 +109,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-[10px] text-dragon-text-muted mt-6">
-          v0.1.4
+          v{APP_VERSION}
         </p>
       </div>
     </div>

@@ -42,5 +42,9 @@ export default function PageTransition({ page, children }: { page: string; child
     }
   }, [page, children]);
 
-  return <div className={animClass}>{content}</div>;
+  return (
+    <div className={`page-transition-container ${animClass}`} style={{ viewTransitionName: 'page' }}>
+      {content}
+    </div>
+  );
 }

@@ -82,7 +82,7 @@ export default function Reports() {
         }
         case 'closing-report': {
           const data = await api.getShiftClosingHistory();
-          setResultData(data);
+          setResultData(data.filter((sc: any) => sc.status === 'closed'));
           break;
         }
       }
