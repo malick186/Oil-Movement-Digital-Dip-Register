@@ -28,6 +28,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::bootstrap::is_bootstrap_required,
+            commands::bootstrap::bootstrap_admin,
             commands::auth::login,
             commands::auth::logout,
             commands::auth::get_current_user,
@@ -42,6 +44,7 @@ pub fn run() {
             commands::dips::get_dip_record,
             commands::dips::list_dip_records,
             commands::dips::request_correction,
+            commands::dips::list_dip_corrections,
             commands::dips::check_duplicate_dip,
             commands::verification::review_dip,
             commands::verification::recheck_dip,

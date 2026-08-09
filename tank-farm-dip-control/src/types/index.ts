@@ -69,22 +69,22 @@ export interface DipRecord {
   record_number: string;
   date: string;
   time: string;
-  shift_id: number | null;
+  shift_id: number;
   tank_id: number;
   product_id: number;
-  reference_point_snapshot: string;
-  gross_dip_mm: number;
+  reference_point_snapshot: string | null;
+  gross_dip_mm: number | null;
   auto_dip_mm: number | null;
   radar_dip_mm: number | null;
-  water_dip_mm: number;
-  sludge_dip_mm: number;
+  water_dip_mm: number | null;
+  sludge_dip_mm: number | null;
   temperature: number | null;
-  temperature_unit: string;
+  temperature_unit: string | null;
   density: number | null;
   tank_status_id: number | null;
-  custom_tank_status: string;
-  operator_id: number | null;
-  remarks: string;
+  custom_tank_status: string | null;
+  operator_id: number;
+  remarks: string | null;
   gross_auto_difference: number | null;
   gross_radar_difference: number | null;
   auto_radar_difference: number | null;
@@ -106,6 +106,30 @@ export interface DipRecordWithRelations extends DipRecord {
   operator_name: string;
   entered_by_name: string;
   location: string;
+}
+
+export interface DipRecheck {
+  id: number;
+  original_dip_id: number;
+  recheck_dip_id: number | null;
+  recheck_operator_id: number;
+  recheck_remarks: string | null;
+  reviewer_id: number | null;
+  final_decision: string | null;
+  created_at: string;
+}
+
+export interface DipCorrection {
+  id: number;
+  dip_record_id: number;
+  field_name: string;
+  old_value: string | null;
+  new_value: string;
+  reason: string | null;
+  requested_by: number;
+  approved_by: number | null;
+  status: string;
+  created_at: string;
 }
 
 export interface DashboardStats {
@@ -150,7 +174,7 @@ export interface ToleranceSetting {
   id: number;
   tank_id: number | null;
   product_id: number | null;
-  location: string;
+  location: string | null;
   comparison_type: string;
   normal_limit: number;
   attention_limit: number;
@@ -179,6 +203,12 @@ export interface ShiftStatus {
   pending_approval: number;
   exceptions: number;
   is_closed: boolean;
+}
+
+export interface BackupInfo {
+  filename: string;
+  created_at: string;
+  file_size: number;
 }
 
 export interface AttentionItem {

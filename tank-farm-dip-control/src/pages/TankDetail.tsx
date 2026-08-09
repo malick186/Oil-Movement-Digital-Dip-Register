@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import * as api from '../services/api';
 import type { Tank, DipRecordWithRelations } from '../types';
 import { Cylinder, TrendingUp, History } from 'lucide-react';
@@ -35,18 +35,18 @@ export default function TankDetail({ tankId, onBack }: Props) {
     })();
   }, [tankId]);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     try {
       const data = await api.listDipRecords({ tank_id: tankId, limit: 50 });
       setHistory(data);
     } catch {
       useToastStore.getState().addToast('Failed to load dip history', 'error');
     }
-  };
+  }, [tankId]);
 
   useEffect(() => {
     if (tab === 'history') loadHistory();
-  }, [tab]);
+  }, [tab, loadHistory]);
 
   if (loading) {
     return (

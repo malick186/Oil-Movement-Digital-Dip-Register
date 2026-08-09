@@ -8,21 +8,23 @@ export const loginSchema = z.object({
 export type LoginFormData = z.infer<typeof loginSchema>;
 
 export const dipEntrySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date is required'),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must use HH:MM format'),
   tank_id: z.number().min(1, 'Tank is required'),
   product_id: z.number().min(1, 'Product is required'),
   shift_id: z.number().min(1, 'Shift is required'),
-  gross_dip_mm: z.number().min(0, 'Gross dip must be positive'),
-  auto_dip_mm: z.number().nullable().optional(),
-  radar_dip_mm: z.number().nullable().optional(),
-  water_dip_mm: z.number().min(0, 'Water dip must be non-negative'),
-  sludge_dip_mm: z.number().min(0, 'Sludge dip must be non-negative'),
-  temperature: z.number().nullable().optional(),
-  temperature_unit: z.string(),
-  density: z.number().nullable().optional(),
-  tank_status_id: z.number().nullable().optional(),
+  gross_dip_mm: z.number().finite().min(0, 'Gross dip must be non-negative'),
+  auto_dip_mm: z.number().finite().min(0, 'Auto dip must be non-negative').nullable().optional(),
+  radar_dip_mm: z.number().finite().min(0, 'Radar dip must be non-negative').nullable().optional(),
+  water_dip_mm: z.number().finite().min(0, 'Water dip must be non-negative'),
+  sludge_dip_mm: z.number().finite().min(0, 'Sludge dip must be non-negative'),
+  temperature: z.number().finite('Temperature is required'),
+  temperature_unit: z.enum(['C', 'F']),
+  density: z.number().finite().positive('Density must be greater than zero'),
+  tank_status_id: z.number().min(1, 'Tank status is required'),
   custom_tank_status: z.string().optional(),
-  operator_id: z.number().nullable().optional(),
-  remarks: z.string().optional(),
+  operator_id: z.number().min(1, 'Dip Performed By is required'),
+  remarks: z.string().max(1000, 'Remarks must be 1000 characters or less').optional(),
 });
 
 export type DipEntryFormData = z.infer<typeof dipEntrySchema>;
@@ -33,7 +35,7 @@ export const tankSchema = z.object({
   tank_farm: z.string().min(1, 'Tank farm is required'),
   normal_product: z.string().optional(),
   current_product: z.string().optional(),
-  reference_point: z.string().optional(),
+  reference_point: z.string().min(1, 'Reference point is required'),
   tank_type: z.string().optional(),
   roof_type: z.string().optional(),
   safe_fill_height: z.number().nullable().optional(),
@@ -85,7 +87,7 @@ export type TankStatusFormData = z.infer<typeof tankStatusSchema>;
 export const userSchema = z.object({
   username: z.string().min(1, 'Username is required'),
   full_name: z.string().min(1, 'Full name is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.enum(['Shift Supervisor', 'Shift In-Charge', 'Administrator']),
 });
 

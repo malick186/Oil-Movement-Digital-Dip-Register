@@ -2,35 +2,58 @@ use rusqlite::params;
 use std::sync::Mutex;
 
 use crate::models::{ShiftClosing, ShiftStatus, UserSession};
-use crate::util::{audit_log, get_current_user_id};
+use crate::util::{audit_log, require_roles};
+
+fn today_string() -> String {
+    chrono::Local::now().format("%Y-%m-%d").to_string()
+}
+
+fn unresolved_count(conn: &rusqlite::Connection, shift_id: i64, date: &str) -> i64 {
+    conn.query_row(
+        "SELECT COUNT(*) FROM dip_records
+         WHERE shift_id=?1 AND date=?2
+           AND record_status NOT IN ('approved','rejected','superseded')",
+        params![shift_id, date],
+        |row| row.get(0),
+    )
+    .unwrap_or(0)
+}
+
+fn open_exception_count(conn: &rusqlite::Connection, shift_id: i64, date: &str) -> i64 {
+    conn.query_row(
+        "SELECT COUNT(*) FROM exceptions e
+         INNER JOIN dip_records d ON e.dip_record_id=d.id
+         WHERE d.shift_id=?1 AND d.date=?2 AND e.status='open'",
+        params![shift_id, date],
+        |row| row.get(0),
+    )
+    .unwrap_or(0)
+}
 
 #[tauri::command]
 pub fn get_shift_status(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+    current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Vec<ShiftStatus>, String> {
+    let _session = require_roles(&current_session, &["Shift Supervisor", "Shift In-Charge", "Administrator"])?;
     let conn = db.lock().map_err(|e| e.to_string())?;
-
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let today = today_string();
 
     let mut stmt = conn
-        .prepare(
-            "SELECT id, name, start_time, end_time, active FROM shifts WHERE active = 1 ORDER BY id",
-        )
+        .prepare("SELECT id, name FROM shifts WHERE active=1 ORDER BY id")
         .map_err(|e| e.to_string())?;
-
-    let shifts: Vec<(i64, String)> = stmt
-        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+    let shifts = stmt
+        .query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
-
     drop(stmt);
 
     let mut statuses = Vec::new();
-    for (shift_id, shift_name) in &shifts {
+    for (shift_id, shift_name) in shifts {
         let total_dips: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM dip_records WHERE shift_id = ?1 AND date = ?2",
+                "SELECT COUNT(*) FROM dip_records WHERE shift_id=?1 AND date=?2",
                 params![shift_id, today],
                 |row| row.get(0),
             )
@@ -38,7 +61,9 @@ pub fn get_shift_status(
 
         let pending_review: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM dip_records WHERE shift_id = ?1 AND date = ?2 AND review_status = 'pending' AND record_status IN ('submitted', 'in_review')",
+                "SELECT COUNT(*) FROM dip_records WHERE shift_id=?1 AND date=?2
+                 AND (record_status IN ('draft','submitted','recheck_required','in_review')
+                      OR review_status IN ('pending','recheck','recheck_pending','recheck_recorded'))",
                 params![shift_id, today],
                 |row| row.get(0),
             )
@@ -46,33 +71,26 @@ pub fn get_shift_status(
 
         let pending_approval: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM dip_records WHERE shift_id = ?1 AND date = ?2 AND approval_status = 'pending' AND review_status = 'approved'",
+                "SELECT COUNT(*) FROM dip_records WHERE shift_id=?1 AND date=?2
+                 AND (approval_status='correction_pending' OR record_status='correction_requested')",
                 params![shift_id, today],
                 |row| row.get(0),
             )
             .unwrap_or(0);
 
-        let exceptions: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM exceptions e INNER JOIN dip_records d ON e.dip_record_id = d.id
-                 WHERE d.shift_id = ?1 AND d.date = ?2 AND e.status = 'open'",
-                params![shift_id, today],
-                |row| row.get(0),
-            )
-            .unwrap_or(0);
-
+        let exceptions = open_exception_count(&conn, shift_id, &today);
         let is_closed: bool = conn
             .query_row(
-                "SELECT COUNT(*) FROM shift_closings WHERE shift_id = ?1 AND date = ?2 AND status = 'closed'",
+                "SELECT COUNT(*) FROM shift_closings WHERE shift_id=?1 AND date=?2 AND status='closed'",
                 params![shift_id, today],
                 |row| row.get::<_, i64>(0),
             )
-            .map(|c| c > 0)
+            .map(|count| count > 0)
             .unwrap_or(false);
 
         statuses.push(ShiftStatus {
-            shift_id: *shift_id,
-            shift_name: shift_name.clone(),
+            shift_id,
+            shift_name,
             total_dips,
             pending_review,
             pending_approval,
@@ -91,77 +109,76 @@ pub fn close_shift(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<ShiftClosing, String> {
+    let session = require_roles(&current_session, &["Shift In-Charge", "Administrator"])?;
     let conn = db.lock().map_err(|e| e.to_string())?;
-    let user_id = get_current_user_id(&current_session)?;
-    let user_role = {
-        let sess = current_session.lock().map_err(|e| e.to_string())?;
-        sess.as_ref().map(|s| s.role.clone()).unwrap_or_default()
-    };
+    let today = today_string();
 
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let shift_exists: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM shifts WHERE id=?1 AND active=1",
+            params![shift_id],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    if shift_exists == 0 {
+        return Err("Selected Shift is invalid or inactive".to_string());
+    }
 
     let already_closed: i64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM shift_closings WHERE shift_id = ?1 AND date = ?2 AND status = 'closed'",
+            "SELECT COUNT(*) FROM shift_closings WHERE shift_id=?1 AND date=?2 AND status='closed'",
             params![shift_id, today],
             |row| row.get(0),
         )
         .unwrap_or(0);
-
     if already_closed > 0 {
-        return Err("Shift already closed for today".to_string());
+        return Err("Shift is already closed for today".to_string());
     }
 
     let total_dips: i64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE shift_id = ?1 AND date = ?2",
+            "SELECT COUNT(*) FROM dip_records WHERE shift_id=?1 AND date=?2",
             params![shift_id, today],
             |row| row.get(0),
         )
         .unwrap_or(0);
+    if total_dips == 0 {
+        return Err("Shift cannot be closed because no Dip Records have been recorded".to_string());
+    }
 
-    let total_exceptions: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM exceptions e INNER JOIN dip_records d ON e.dip_record_id = d.id
-             WHERE d.shift_id = ?1 AND d.date = ?2 AND e.status = 'open'",
-            params![shift_id, today],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-
-    let pending_items: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE shift_id = ?1 AND date = ?2 AND record_status NOT IN ('approved', 'rejected')",
-            params![shift_id, today],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
+    let pending_items = unresolved_count(&conn, shift_id, &today);
+    let total_exceptions = open_exception_count(&conn, shift_id, &today);
+    if pending_items > 0 || total_exceptions > 0 {
+        return Err(format!(
+            "Shift cannot be closed: {} unresolved Dip Record(s) and {} open exception(s) remain.",
+            pending_items, total_exceptions
+        ));
+    }
 
     conn.execute(
         "INSERT INTO shift_closings (date, shift_id, closed_by, closing_remarks, total_dips, total_exceptions, pending_items, status)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'closed')",
-        params![today, shift_id, user_id, remarks, total_dips, total_exceptions, pending_items],
+         VALUES (?1, ?2, ?3, ?4, ?5, 0, 0, 'closed')",
+        params![today, shift_id, session.user_id, remarks, total_dips],
     )
-    .map_err(|e| format!("Failed to close shift: {}", e))?;
-
+    .map_err(|e| format!("Failed to close Shift: {}", e))?;
     let id = conn.last_insert_rowid();
 
     audit_log(
         &conn,
-        user_id,
-        &user_role,
+        session.user_id,
+        &session.role,
         "close_shift",
         None,
         None,
         None,
         None,
         None,
-        Some(&format!("Shift {} closed for {}", shift_id, today)),
+        Some(&format!("Shift {} closed for {} after all controls cleared", shift_id, today)),
     );
 
     conn.query_row(
         "SELECT id, date, shift_id, closed_by, closed_at, closing_remarks, total_dips, total_exceptions, pending_items, status
-         FROM shift_closings WHERE id = ?1",
+         FROM shift_closings WHERE id=?1",
         params![id],
         |row| {
             Ok(ShiftClosing {
@@ -184,7 +201,9 @@ pub fn close_shift(
 #[tauri::command]
 pub fn get_shift_closing_history(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+    current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Vec<ShiftClosing>, String> {
+    let _session = require_roles(&current_session, &["Shift Supervisor", "Shift In-Charge", "Administrator"])?;
     let conn = db.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
         .prepare(
@@ -192,8 +211,7 @@ pub fn get_shift_closing_history(
              FROM shift_closings ORDER BY date DESC, shift_id DESC LIMIT 100",
         )
         .map_err(|e| e.to_string())?;
-
-    let result = stmt
+    let rows = stmt
         .query_map([], |row| {
             Ok(ShiftClosing {
                 id: row.get(0)?,
@@ -210,8 +228,6 @@ pub fn get_shift_closing_history(
         })
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string());
-
-    drop(stmt);
-    result
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
 }

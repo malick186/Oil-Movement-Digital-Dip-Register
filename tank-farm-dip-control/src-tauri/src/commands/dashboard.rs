@@ -1,8 +1,9 @@
 use rusqlite::params;
-use std::sync::Mutex;
 use serde::Serialize;
+use std::sync::Mutex;
 
-use crate::models::DashboardStats;
+use crate::models::{DashboardStats, UserSession};
+use crate::util::require_roles;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AttentionItem {
@@ -24,35 +25,28 @@ pub struct AttentionItem {
 #[tauri::command]
 pub fn get_attention_list(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+    current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Vec<AttentionItem>, String> {
+    let _session = require_roles(&current_session, &["Shift Supervisor", "Shift In-Charge", "Administrator"])?;
     let conn = db.lock().map_err(|e| e.to_string())?;
 
-    let max_attention: f64 = conn
-        .query_row(
-            "SELECT COALESCE(MIN(attention_limit), 5.0) FROM tolerance_settings",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(5.0);
-
     let mut stmt = conn.prepare(
-        "SELECT dr.id, COALESCE(dr.tank_id, 0), dr.record_number, COALESCE(t.tank_no, ''), COALESCE(p.name, ''),
+        "SELECT dr.id, dr.tank_id, dr.record_number, COALESCE(t.tank_no,''), COALESCE(p.name,''),
                 dr.gross_dip_mm, dr.auto_dip_mm, dr.radar_dip_mm,
                 dr.gross_auto_difference, dr.gross_radar_difference,
-                COALESCE(ts.name, ''), dr.review_status,
-                COALESCE(dr.date || ' ' || dr.time, '')
+                COALESCE(ts.name,''), dr.review_status,
+                COALESCE(dr.date || ' ' || dr.time,'')
          FROM dip_records dr
-         LEFT JOIN tanks t ON dr.tank_id = t.id
-         LEFT JOIN products p ON dr.product_id = p.id
-         LEFT JOIN tank_statuses ts ON dr.tank_status_id = ts.id
-         WHERE dr.record_status IN ('submitted', 'in_review')
-            OR ABS(COALESCE(dr.gross_auto_difference, 0)) > ?1
-            OR ABS(COALESCE(dr.gross_radar_difference, 0)) > ?1
-         ORDER BY dr.date DESC, dr.time DESC
-         LIMIT 20"
+         LEFT JOIN tanks t ON dr.tank_id=t.id
+         LEFT JOIN products p ON dr.product_id=p.id
+         LEFT JOIN tank_statuses ts ON dr.tank_status_id=ts.id
+         WHERE dr.record_status IN ('submitted','in_review','recheck_required','correction_requested')
+            OR EXISTS (SELECT 1 FROM exceptions e WHERE e.dip_record_id=dr.id AND e.status='open')
+         ORDER BY dr.date DESC,dr.time DESC
+         LIMIT 50"
     ).map_err(|e| e.to_string())?;
 
-    let items = stmt.query_map(params![max_attention], |row| {
+    let items = stmt.query_map([], |row| {
         Ok(AttentionItem {
             dip_id: row.get(0)?,
             tank_id: row.get(1)?,
@@ -69,89 +63,49 @@ pub fn get_attention_list(
             last_gauged: row.get(12)?,
         })
     }).map_err(|e| e.to_string())?
-    .collect::<Result<Vec<_>, _>>()
-    .map_err(|e| e.to_string())?;
-
-    drop(stmt);
+      .collect::<Result<Vec<_>, _>>()
+      .map_err(|e| e.to_string())?;
     Ok(items)
 }
 
 #[tauri::command]
 pub fn get_dashboard_stats(
     db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+    current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<DashboardStats, String> {
+    let _session = require_roles(&current_session, &["Shift Supervisor", "Shift In-Charge", "Administrator"])?;
     let conn = db.lock().map_err(|e| e.to_string())?;
-
-    let active_tanks: i64 = conn
-        .query_row("SELECT COUNT(*) FROM tanks WHERE active = 1", [], |row| {
-            row.get(0)
-        })
-        .unwrap_or(0);
-
-    let dips_completed: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE record_status = 'submitted' OR record_status = 'approved'",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-
-    let dips_pending: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE record_status = 'draft'",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-
-    let awaiting_review: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE review_status = 'pending' AND record_status IN ('submitted', 'in_review')",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-
-    let recheck_required: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE review_status = 'recheck'",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-
-    let max_tolerance: f64 = conn
-        .query_row(
-            "SELECT COALESCE(MIN(normal_limit), 10.0) FROM tolerance_settings",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(10.0);
-
-    let abnormal_diff: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE (gross_auto_difference IS NOT NULL AND ABS(gross_auto_difference) > ?1) OR (gross_radar_difference IS NOT NULL AND ABS(gross_radar_difference) > ?1) OR (auto_radar_difference IS NOT NULL AND ABS(auto_radar_difference) > ?1)",
-            params![max_tolerance],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-
-    let approved: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM dip_records WHERE approval_status = 'approved'",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-    let shift_closing_status: String = conn
-        .query_row(
-            "SELECT COALESCE(status, 'open') FROM shift_closings WHERE date = ?1 ORDER BY id DESC LIMIT 1",
-            params![today],
-            |row| row.get(0),
-        )
-        .unwrap_or_else(|_| "open".to_string());
+
+    let active_tanks: i64 = conn.query_row("SELECT COUNT(*) FROM tanks WHERE active=1", [], |row| row.get(0)).unwrap_or(0);
+    let dips_completed: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM dip_records WHERE date=?1 AND record_status IN ('submitted','approved','rejected','superseded','in_review','recheck_required','correction_requested')",
+        params![today], |row| row.get(0)
+    ).unwrap_or(0);
+    let dips_pending: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM dip_records WHERE date=?1 AND record_status='draft'",
+        params![today], |row| row.get(0)
+    ).unwrap_or(0);
+    let awaiting_review: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM dip_records WHERE date=?1 AND record_status='submitted' AND review_status IN ('pending','recheck_pending')",
+        params![today], |row| row.get(0)
+    ).unwrap_or(0);
+    let recheck_required: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM dip_records WHERE date=?1 AND record_status='recheck_required'",
+        params![today], |row| row.get(0)
+    ).unwrap_or(0);
+    let abnormal_diff: i64 = conn.query_row(
+        "SELECT COUNT(DISTINCT e.dip_record_id) FROM exceptions e INNER JOIN dip_records d ON e.dip_record_id=d.id WHERE d.date=?1 AND e.status='open'",
+        params![today], |row| row.get(0)
+    ).unwrap_or(0);
+    let approved: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM dip_records WHERE date=?1 AND approval_status='approved' AND record_status='approved'",
+        params![today], |row| row.get(0)
+    ).unwrap_or(0);
+    let shift_closing_status: String = conn.query_row(
+        "SELECT COALESCE(status,'open') FROM shift_closings WHERE date=?1 ORDER BY id DESC LIMIT 1",
+        params![today], |row| row.get(0)
+    ).unwrap_or_else(|_| "open".to_string());
 
     Ok(DashboardStats {
         active_tanks,

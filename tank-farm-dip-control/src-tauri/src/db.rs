@@ -2,23 +2,72 @@ use rusqlite::Connection;
 use std::path::PathBuf;
 
 const SCHEMA_VERSION: i64 = 1;
+const DB_FILENAME: &str = "tank_farm_dip.db";
+
+fn legacy_portable_db_path() -> PathBuf {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("data").join(DB_FILENAME)))
+        .unwrap_or_else(|| PathBuf::from("data").join(DB_FILENAME))
+}
 
 pub fn get_db_path(_app_handle: &tauri::AppHandle) -> PathBuf {
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-        .unwrap_or_else(|| PathBuf::from("."));
-    let data_dir = exe_dir.join("data");
-    std::fs::create_dir_all(&data_dir).expect("failed to create data dir");
-    data_dir.join("tank_farm_dip.db")
+    let legacy_path = legacy_portable_db_path();
+    let preferred_dir = dirs::data_local_dir()
+        .map(|base| base.join("TankFarmDipControl").join("Data"))
+        .unwrap_or_else(|| {
+            legacy_path
+                .parent()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| PathBuf::from("data"))
+        });
+
+    if let Err(error) = std::fs::create_dir_all(&preferred_dir) {
+        log::warn!(
+            "Unable to create user-local data directory {}: {}. Falling back to portable data path.",
+            preferred_dir.display(),
+            error
+        );
+        return legacy_path;
+    }
+
+    let preferred_path = preferred_dir.join(DB_FILENAME);
+
+    // Preserve existing portable deployments. On first run of this version, copy the
+    // previous database beside the executable into the writable user-local directory.
+    // SQLite is reopened normally afterwards and WAL/foreign-key pragmas are reapplied.
+    if !preferred_path.exists() && legacy_path.exists() && legacy_path != preferred_path {
+        if let Err(error) = std::fs::copy(&legacy_path, &preferred_path) {
+            log::warn!(
+                "Unable to migrate legacy database {} to {}: {}",
+                legacy_path.display(),
+                preferred_path.display(),
+                error
+            );
+            return legacy_path;
+        }
+        log::info!(
+            "Migrated legacy portable database from {} to {}",
+            legacy_path.display(),
+            preferred_path.display()
+        );
+    }
+
+    preferred_path
 }
 
 pub fn init_db(app_handle: &tauri::AppHandle) -> Result<Connection, String> {
     let db_path = get_db_path(app_handle);
-    let conn = Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create application data directory: {}", e))?;
+    }
+
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Failed to open local database at {}: {}", db_path.display(), e))?;
 
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
-        .map_err(|e| format!("Failed to set pragmas: {}", e))?;
+        .map_err(|e| format!("Failed to configure SQLite: {}", e))?;
 
     run_migrations(&conn)?;
 

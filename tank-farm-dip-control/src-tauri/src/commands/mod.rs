@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod audit;
 pub mod backup;
+pub mod bootstrap;
 pub mod dashboard;
 pub mod dips;
 pub mod exceptions;

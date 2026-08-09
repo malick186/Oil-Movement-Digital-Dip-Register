@@ -1,167 +1,171 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import * as api from '../services/api';
 import type { ShiftClosing, ShiftStatus } from '../types';
-import { CalendarCheck } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, CheckCircle2, Lock } from 'lucide-react';
 
-export default function ShiftClosing() {
+export default function ShiftClosingPage() {
   const [shiftStatuses, setShiftStatuses] = useState<ShiftStatus[]>([]);
   const [history, setHistory] = useState<ShiftClosing[]>([]);
-  const [closing, setClosing] = useState(false);
-  const [shiftRemarks, setShiftRemarks] = useState<Record<number, string>>({});
   const [closingShiftId, setClosingShiftId] = useState<number | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [shiftRemarks, setShiftRemarks] = useState<Record<number, string>>({});
+  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [statuses, hist] = await Promise.all([
-        api.getShiftStatus(),
-        api.getShiftClosingHistory(),
-      ]);
+      const [statuses, closings] = await Promise.all([api.getShiftStatus(), api.getShiftClosingHistory()]);
       setShiftStatuses(statuses);
-      setHistory(hist);
-    } catch {
-      setMsg('Failed to load shift data');
+      setHistory(closings);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : String(err || 'Failed to load Shift data'));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const handleCloseShift = async (shiftId: number) => {
-    setClosing(true);
-    setMsg(null);
-    setClosingShiftId(shiftId);
+  const blockers = (status: ShiftStatus) => {
+    const reasons: string[] = [];
+    if (status.total_dips === 0) reasons.push('No Dip Records');
+    if (status.pending_review > 0) reasons.push(`${status.pending_review} unresolved / pending review`);
+    if (status.pending_approval > 0) reasons.push(`${status.pending_approval} correction approval pending`);
+    if (status.exceptions > 0) reasons.push(`${status.exceptions} open exception(s)`);
+    return reasons;
+  };
+
+  const handleCloseShift = async (status: ShiftStatus) => {
+    const reasons = blockers(status);
+    if (reasons.length > 0) {
+      setMessage(`Shift cannot be closed: ${reasons.join(', ')}.`);
+      return;
+    }
+    if (!window.confirm(`Close ${status.shift_name} Shift? This will create the final Shift Closing record.`)) return;
+
+    setClosingShiftId(status.shift_id);
+    setMessage(null);
     try {
-      await api.closeShift(shiftId, shiftRemarks[shiftId] || '');
-      setMsg('Shift closed successfully');
-      setShiftRemarks((prev) => {
-        const next = { ...prev };
-        delete next[shiftId];
-        return next;
-      });
-      loadData();
+      await api.closeShift(status.shift_id, shiftRemarks[status.shift_id]?.trim() || undefined);
+      setMessage(`${status.shift_name} Shift closed successfully.`);
+      setShiftRemarks((prev) => ({ ...prev, [status.shift_id]: '' }));
+      await loadData();
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : 'Failed to close shift');
+      setMessage(err instanceof Error ? err.message : String(err || 'Failed to close Shift'));
     } finally {
-      setClosing(false);
       setClosingShiftId(null);
     }
   };
 
   if (loading) {
-    return (
-      <div className="loading-state">
-        <div className="loading-spinner" />
-        <span>Loading...</span>
-      </div>
-    );
+    return <div className="loading-state"><div className="loading-spinner" /><span>Loading...</span></div>;
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <h2 className="text-xl font-bold text-dragon-text mb-4">Shift Closing</h2>
+    <div className="h-full flex flex-col gap-4">
+      <div>
+        <h2 className="text-xl font-bold text-dragon-text">Shift Closing Control Center</h2>
+        <p className="text-xs text-dragon-text-muted mt-1">A Shift can close only after all recorded Dips are finalized and all exceptions are resolved.</p>
+      </div>
 
-      {msg && (
-        <div className={`notice-banner mb-3 ${msg.includes('successfully') ? 'success' : 'error'}`}>
-          {msg}
-        </div>
-      )}
+      {message && <div className="notice-banner info">{message}</div>}
 
-      {shiftStatuses.length === 0 ? (
-        <div className="text-xs text-dragon-text-muted">No active shifts configured</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          {shiftStatuses.map((status) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {shiftStatuses.map((status) => {
+          const reasons = blockers(status);
+          const blocked = reasons.length > 0;
+          return (
             <div key={status.shift_id} className="glass-card p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <CalendarCheck size={24} className={status.is_closed ? 'text-dragon-text-muted' : 'text-dragon-success'} />
-                <div>
-                  <div className="text-sm font-medium text-dragon-text">{status.shift_name}</div>
-                  <div className="text-xs text-dragon-text-secondary">
-                    Status: {status.is_closed ? 'Closed' : 'Open'}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <CalendarCheck size={22} className={status.is_closed ? 'text-dragon-text-muted' : blocked ? 'text-dragon-warning' : 'text-dragon-success'} />
+                  <div>
+                    <div className="text-sm font-semibold text-dragon-text">{status.shift_name}</div>
+                    <div className="text-[10px] text-dragon-text-muted">{status.is_closed ? 'Closed' : blocked ? 'Controls pending' : 'Ready to close'}</div>
                   </div>
                 </div>
+                {status.is_closed ? <CheckCircle2 size={17} className="text-dragon-success" /> : blocked ? <Lock size={16} className="text-dragon-warning" /> : null}
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                <div className="text-dragon-text-secondary">Total Dips: <span className="font-mono text-dragon-text">{status.total_dips}</span></div>
-                <div className="text-dragon-text-secondary">Pending Review: <span className="font-mono text-dragon-text">{status.pending_review}</span></div>
-                <div className="text-dragon-text-secondary">Pending Approval: <span className="font-mono text-dragon-text">{status.pending_approval}</span></div>
-                <div className="text-dragon-text-secondary">Exceptions: <span className="font-mono text-dragon-text">{status.exceptions}</span></div>
+                <Metric label="Total Dips" value={status.total_dips} />
+                <Metric label="Pending Review" value={status.pending_review} warn={status.pending_review > 0} />
+                <Metric label="Pending Approval" value={status.pending_approval} warn={status.pending_approval > 0} />
+                <Metric label="Open Exceptions" value={status.exceptions} warn={status.exceptions > 0} />
               </div>
 
+              {!status.is_closed && blocked && (
+                <div className="notice-banner warning text-[10px] mb-3 items-start">
+                  <AlertTriangle size={13} className="mt-0.5 flex-none" />
+                  <div>{reasons.map((reason) => <div key={reason}>• {reason}</div>)}</div>
+                </div>
+              )}
+
               {!status.is_closed && (
-                <div className="border-t border-dragon-border pt-3">
+                <>
                   <textarea
                     value={shiftRemarks[status.shift_id] || ''}
                     onChange={(e) => setShiftRemarks((prev) => ({ ...prev, [status.shift_id]: e.target.value }))}
                     className="input-field resize-none"
                     rows={2}
-                    placeholder="Closing remarks..."
+                    placeholder="Shift closing remarks..."
                   />
                   <button
-                    onClick={() => handleCloseShift(status.shift_id)}
-                    disabled={closing}
-                    className="mt-2 btn btn-primary"
+                    onClick={() => handleCloseShift(status)}
+                    disabled={blocked || closingShiftId !== null}
+                    className="mt-2 btn btn-primary w-full"
+                    title={blocked ? reasons.join('; ') : 'Close Shift'}
                   >
-                    {closing && closingShiftId === status.shift_id ? 'Closing...' : 'Close Shift'}
+                    {closingShiftId === status.shift_id ? 'Closing...' : blocked ? 'Resolve Pending Controls' : 'Close Shift'}
                   </button>
-                </div>
+                </>
               )}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
-      <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
+      <div className="glass-panel rounded-xl overflow-auto flex-1">
         <table className="data-table w-full text-xs">
-          <thead>
+          <thead className="sticky top-0">
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Date</th>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Shift</th>
-              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Total Dips</th>
-              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Exceptions</th>
-              <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Pending</th>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Status</th>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Closed At</th>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Remarks</th>
+              <th className="text-left px-3 py-2">Date</th>
+              <th className="text-left px-3 py-2">Shift ID</th>
+              <th className="text-right px-3 py-2">Total Dips</th>
+              <th className="text-right px-3 py-2">Exceptions</th>
+              <th className="text-right px-3 py-2">Pending</th>
+              <th className="text-left px-3 py-2">Status</th>
+              <th className="text-left px-3 py-2">Closed At</th>
+              <th className="text-left px-3 py-2">Remarks</th>
             </tr>
           </thead>
           <tbody>
             {history.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="text-center py-8 text-dragon-text-muted">
-                  No shift closing history
-                </td>
+              <tr><td colSpan={8} className="text-center py-8 text-dragon-text-muted">No Shift Closing history</td></tr>
+            ) : history.map((h) => (
+              <tr key={h.id}>
+                <td className="px-3 py-2 text-dragon-text">{h.date}</td>
+                <td className="px-3 py-2 text-dragon-text-secondary">{h.shift_id}</td>
+                <td className="px-3 py-2 text-right font-mono">{h.total_dips}</td>
+                <td className="px-3 py-2 text-right font-mono">{h.total_exceptions}</td>
+                <td className="px-3 py-2 text-right font-mono">{h.pending_items}</td>
+                <td className="px-3 py-2"><span className={h.status === 'closed' ? 'badge badge-success' : 'badge badge-warning'}>{h.status}</span></td>
+                <td className="px-3 py-2 text-dragon-text-secondary">{h.closed_at}</td>
+                <td className="px-3 py-2 text-dragon-text-secondary">{h.closing_remarks || '--'}</td>
               </tr>
-            ) : (
-              history.map((h) => (
-                <tr key={h.id}>
-                  <td className="px-3 py-2 text-dragon-text">{h.date}</td>
-                  <td className="px-3 py-2 text-dragon-text-secondary">{h.shift_id}</td>
-                  <td className="px-3 py-2 text-right font-mono text-dragon-text">{h.total_dips}</td>
-                  <td className="px-3 py-2 text-right font-mono text-dragon-text">{h.total_exceptions}</td>
-                  <td className="px-3 py-2 text-right font-mono text-dragon-text">{h.pending_items}</td>
-                  <td className="px-3 py-2">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                      h.status === 'completed' ? 'bg-dragon-success/20 text-dragon-success' : 'bg-dragon-warning/20 text-dragon-warning'
-                    }`}>
-                      {h.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-dragon-text-secondary">{h.closed_at}</td>
-                  <td className="px-3 py-2 text-dragon-text-secondary">{h.closing_remarks || '--'}</td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function Metric({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
+  return (
+    <div className="rounded-lg border border-dragon-border px-2 py-1.5">
+      <div className="text-[10px] text-dragon-text-muted">{label}</div>
+      <div className={`font-mono text-sm ${warn ? 'text-dragon-warning' : 'text-dragon-text'}`}>{value}</div>
     </div>
   );
 }
