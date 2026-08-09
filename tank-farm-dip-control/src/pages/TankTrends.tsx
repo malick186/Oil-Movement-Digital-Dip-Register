@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as api from '../services/api';
 import type { Tank } from '../types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Area, ComposedChart,
+} from 'recharts';
+import { TrendingUp } from 'lucide-react';
 
 export default function TankTrends() {
   const [tanks, setTanks] = useState<Tank[]>([]);
   const [selectedTank, setSelectedTank] = useState<number | ''>('');
   const [records, setRecords] = useState<{ date: string; gross: number; auto: number | null; radar: number | null }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -27,6 +32,7 @@ export default function TankTrends() {
       setRecords([]);
       return;
     }
+    setAnimate(false);
     (async () => {
       setLoading(true);
       try {
@@ -34,14 +40,14 @@ export default function TankTrends() {
           tank_id: Number(selectedTank),
           limit: 100,
         });
-        setRecords(
-          data.map((r) => ({
-            date: `${r.date} ${r.time || ''}`,
-            gross: r.gross_dip_mm,
-            auto: r.auto_dip_mm,
-            radar: r.radar_dip_mm,
-          }))
-        );
+        const mapped = data.map((r) => ({
+          date: `${r.date} ${r.time || ''}`,
+          gross: r.gross_dip_mm ?? 0,
+          auto: r.auto_dip_mm ?? null,
+          radar: r.radar_dip_mm ?? null,
+        }));
+        setRecords(mapped);
+        requestAnimationFrame(() => setAnimate(true));
       } catch {
         setRecords([]);
       } finally {
@@ -50,16 +56,62 @@ export default function TankTrends() {
     })();
   }, [selectedTank]);
 
+  const gradientId = 'dipGradient';
+
+  const CustomDot = useCallback((props: any) => {
+    const { cx, cy, stroke } = props;
+    if (cx == null || cy == null) return null;
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill={stroke}
+        stroke="var(--dr-card)"
+        strokeWidth={2}
+        style={{ filter: `drop-shadow(0 0 6px ${stroke}66)` }}
+      />
+    );
+  }, []);
+
+  const CustomTooltip = useCallback(({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div
+        className="glass-card p-3 text-xs"
+        style={{ border: '1px solid var(--dr-border)', animation: 'scaleIn 0.15s ease forwards' }}
+      >
+        <div className="text-dragon-text-muted mb-1">{label}</div>
+        {payload.map((p: any) => (
+          <div key={p.dataKey} className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+            <span className="text-dragon-text-secondary">{p.name}:</span>
+            <span className="text-dragon-text font-semibold">{p.value?.toFixed(1)} mm</span>
+          </div>
+        ))}
+      </div>
+    );
+  }, []);
+
+  const chartAnim = animate
+    ? { isAnimationActive: true, animationBegin: 0, animationDuration: 1800, animationEasing: 'ease-out' as const }
+    : { isAnimationActive: false };
+
   return (
     <div className="space-y-4 anim-fade-up h-full flex flex-col">
-      <h2 className="text-xl font-bold text-dragon-text">Tank Trends</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-dragon-text">Tank Trends</h2>
+        {records.length > 0 && (
+          <span className="text-xs text-dragon-text-muted">{records.length} records</span>
+        )}
+      </div>
 
       <div className="flex items-center gap-2">
         <label className="text-xs font-medium text-dragon-text-secondary">Tank:</label>
         <select
           value={selectedTank}
           onChange={(e) => setSelectedTank(e.target.value ? Number(e.target.value) : '')}
-          className="input-field"
+          className="input-field max-w-xs"
         >
           <option value="">Select a tank...</option>
           {tanks.map((t) => (
@@ -77,26 +129,77 @@ export default function TankTrends() {
         </div>
       ) : !selectedTank ? (
         <div className="empty-state flex-1">
-          <span className="empty-state-text">Select a tank to view trends</span>
+          <TrendingUp size={40} className="empty-state-icon" />
+          <span className="empty-state-text">Select a tank to view trend data</span>
         </div>
       ) : records.length === 0 ? (
         <div className="empty-state flex-1">
-          <span className="empty-state-text">No data available for this tank</span>
+          <span className="empty-state-text">No dip records found for this tank</span>
         </div>
       ) : (
         <div className="glass-panel rounded-xl p-4 flex-1">
+          <svg width="0" height="0">
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--dr-primary)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="var(--dr-primary)" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+          </svg>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={records} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#64748b" />
-              <YAxis tick={{ fontSize: 10 }} stroke="#64748b" />
-              <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 4, border: '1px solid #334155' }}
+            <ComposedChart data={records} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+              <defs>
+                <linearGradient id="grossGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--dr-primary)" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="var(--dr-primary)" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="autoGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--dr-success)" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="var(--dr-success)" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="radarGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--dr-warning)" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="var(--dr-warning)" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--dr-border)" strokeOpacity={0.5} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--dr-text-muted)' }} tickLine={false} axisLine={{ stroke: 'var(--dr-border)' }} />
+              <YAxis tick={{ fontSize: 10, fill: 'var(--dr-text-muted)' }} tickLine={false} axisLine={{ stroke: 'var(--dr-border)' }} />
+              <Tooltip content={CustomTooltip} />
+              <Area
+                type="monotone"
+                dataKey="gross"
+                fill="url(#grossGrad)"
+                stroke="var(--dr-primary)"
+                strokeWidth={2}
+                dot={false}
+                activeDot={<CustomDot />}
+                name="Gross Dip"
+                {...chartAnim}
               />
-              <Line type="monotone" dataKey="gross" stroke="#3b82f6" strokeWidth={2} dot={false} name="Gross Dip" />
-              <Line type="monotone" dataKey="auto" stroke="#22c55e" strokeWidth={1.5} dot={false} name="Auto Dip" />
-              <Line type="monotone" dataKey="radar" stroke="#f97316" strokeWidth={1.5} dot={false} name="Radar Dip" />
-            </LineChart>
+              <Line
+                type="monotone"
+                dataKey="auto"
+                stroke="var(--dr-success)"
+                strokeWidth={2}
+                strokeDasharray="6 3"
+                dot={false}
+                activeDot={<CustomDot />}
+                name="Auto Dip"
+                {...chartAnim}
+              />
+              <Line
+                type="monotone"
+                dataKey="radar"
+                stroke="var(--dr-warning)"
+                strokeWidth={2}
+                strokeDasharray="3 2"
+                dot={false}
+                activeDot={<CustomDot />}
+                name="Radar Dip"
+                {...chartAnim}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       )}

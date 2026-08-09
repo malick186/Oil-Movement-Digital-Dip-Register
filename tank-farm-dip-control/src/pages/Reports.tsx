@@ -117,8 +117,22 @@ export default function Reports() {
   };
 
   return (
-    <div className="space-y-4 anim-fade-up h-full flex flex-col">
+    <div className="space-y-4 anim-fade-up h-full flex flex-col" id="report-page">
       <h2 className="text-xl font-bold text-dragon-text">Reports</h2>
+
+      {selectedReport && (
+        <>
+          <div className="report-title hidden">
+            {reports.find((r) => r.id === selectedReport)?.label ?? 'Report'}
+          </div>
+          <div className="report-meta hidden">
+            Generated: {new Date().toLocaleString()}
+            {dateFrom && ` | From: ${dateFrom}`}
+            {dateTo && ` | To: ${dateTo}`}
+            {tankId && ` | Tank ID: ${tankId}`}
+          </div>
+        </>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {reports.map((r) => (
