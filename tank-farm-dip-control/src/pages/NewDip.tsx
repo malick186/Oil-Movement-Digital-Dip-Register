@@ -1,10 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { dipEntrySchema, type DipEntryFormData } from '../validation/schemas';
-import type { Tank, Product, Operator, TankStatus, ShiftStatus } from '../types';
+import type { DipRecordWithRelations, Operator, Product, ShiftStatus, Tank, TankStatus } from '../types';
 import * as api from '../services/api';
 import { useToastStore } from '../store/toastStore';
+import { AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
+
+function localDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function localTime() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+function finite(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function diff(a: unknown, b: unknown): number | null {
+  const left = finite(a);
+  const right = finite(b);
+  return left == null || right == null ? null : Math.round((left - right) * 1000) / 1000;
+}
 
 export default function NewDip() {
   const [tanks, setTanks] = useState<Tank[]>([]);
@@ -12,10 +37,11 @@ export default function NewDip() {
   const [operators, setOperators] = useState<Operator[]>([]);
   const [statuses, setStatuses] = useState<TankStatus[]>([]);
   const [activeShifts, setActiveShifts] = useState<ShiftStatus[]>([]);
+  const [recheckRecords, setRecheckRecords] = useState<DipRecordWithRelations[]>([]);
+  const [recheckTarget, setRecheckTarget] = useState<DipRecordWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -27,6 +53,8 @@ export default function NewDip() {
   } = useForm<DipEntryFormData>({
     resolver: zodResolver(dipEntrySchema),
     defaultValues: {
+      date: localDate(),
+      time: localTime(),
       water_dip_mm: 0,
       sludge_dip_mm: 0,
       temperature_unit: 'C',
@@ -34,6 +62,25 @@ export default function NewDip() {
   });
 
   const selectedTankId = watch('tank_id');
+  const selectedProductId = watch('product_id');
+  const selectedStatusId = watch('tank_status_id');
+  const gross = watch('gross_dip_mm');
+  const auto = watch('auto_dip_mm');
+  const radar = watch('radar_dip_mm');
+
+  const selectedTank = tanks.find((t) => t.id === Number(selectedTankId));
+  const selectedStatus = statuses.find((s) => s.id === Number(selectedStatusId));
+  const grossAuto = diff(gross, auto);
+  const grossRadar = diff(gross, radar);
+  const autoRadar = diff(auto, radar);
+
+  const loadRechecks = async () => {
+    try {
+      setRecheckRecords(await api.listDipRecords({ review_status: 'recheck', limit: 100 }));
+    } catch {
+      setRecheckRecords([]);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -48,321 +95,327 @@ export default function NewDip() {
         setTanks(t);
         setProducts(p);
         setOperators(o);
-        setStatuses(s);
+        setStatuses(s.filter((status) => Boolean(status.active)));
         const openShifts = shifts.filter((sh) => !sh.is_closed);
         setActiveShifts(openShifts);
-        if (openShifts.length > 0) {
-          setValue('shift_id', openShifts[0].shift_id);
-        }
-      } catch {
-        setErrorMsg('Failed to load reference data');
-        useToastStore.getState().addToast('Failed to load reference data', 'error');
+        if (openShifts[0]) setValue('shift_id', openShifts[0].shift_id);
+        await loadRechecks();
+      } catch (err) {
+        const text = err instanceof Error ? err.message : String(err || 'Failed to load reference data');
+        setMessage(text);
+        useToastStore.getState().addToast('Failed to load Dip Entry reference data', 'error');
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [setValue]);
 
-  const selectedTank = tanks.find((t) => t.id === Number(selectedTankId));
+  useEffect(() => {
+    if (!selectedTank || recheckTarget) return;
+    const desired = (selectedTank.current_product || selectedTank.normal_product || '').trim().toLowerCase();
+    if (!desired) return;
+    const match = products.find((p) => p.name.trim().toLowerCase() === desired || p.code.trim().toLowerCase() === desired);
+    if (match && Number(selectedProductId) !== match.id) {
+      setValue('product_id', match.id, { shouldValidate: true });
+    }
+  }, [selectedTank, selectedProductId, products, recheckTarget, setValue]);
 
-  const onSubmit = async (data: DipEntryFormData) => {
+  const startRecheck = (record: DipRecordWithRelations) => {
+    setRecheckTarget(record);
+    setValue('tank_id', record.tank_id, { shouldValidate: true });
+    setValue('product_id', record.product_id, { shouldValidate: true });
+    setValue('shift_id', record.shift_id, { shouldValidate: true });
+    setValue('date', localDate(), { shouldValidate: true });
+    setValue('time', localTime(), { shouldValidate: true });
+    setMessage(`Recording physical recheck for ${record.record_number} / ${record.tank_no}`);
+  };
+
+  const clearRecheck = () => {
+    setRecheckTarget(null);
+    setValue('date', localDate());
+    setValue('time', localTime());
+    setMessage(null);
+  };
+
+  const resetEntry = () => {
+    const firstShift = activeShifts[0]?.shift_id;
+    reset({
+      date: localDate(),
+      time: localTime(),
+      shift_id: firstShift,
+      water_dip_mm: 0,
+      sludge_dip_mm: 0,
+      temperature_unit: 'C',
+    });
+    setRecheckTarget(null);
+  };
+
+  const save = async (data: DipEntryFormData, submitForReview: boolean) => {
     setSubmitting(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
+    setMessage(null);
     try {
-      const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
-      const timeStr = now.toTimeString().slice(0, 5);
-      await api.createDipRecord({
-        date: dateStr,
-        time: timeStr,
+      const tank = tanks.find((t) => t.id === Number(data.tank_id));
+      const status = statuses.find((s) => s.id === Number(data.tank_status_id));
+      if (!tank) throw new Error('Selected Tank is not available');
+      if (!tank.reference_point?.trim()) throw new Error('Reference Point is missing in Tank Master');
+      if (tank.auto_dip_available && finite(data.auto_dip_mm) == null) throw new Error('Auto Dip is required for this Tank');
+      if (tank.radar_available && finite(data.radar_dip_mm) == null) throw new Error('Radar Dip is required for this Tank');
+      if (status?.allow_custom && !data.custom_tank_status?.trim()) throw new Error('Custom Tank Status details are required');
+
+      const duplicate = await api.checkDuplicateDip(Number(data.tank_id), data.date, data.time, Number(data.shift_id));
+      if (duplicate && !window.confirm(`${duplicate}\n\nContinue anyway?`)) {
+        setSubmitting(false);
+        return;
+      }
+
+      const payload: api.CreateDipPayload = {
+        date: data.date,
+        time: data.time,
         shift_id: Number(data.shift_id),
         tank_id: Number(data.tank_id),
         product_id: Number(data.product_id),
+        reference_point_snapshot: tank.reference_point,
         gross_dip_mm: Number(data.gross_dip_mm),
-        auto_dip_mm: data.auto_dip_mm != null ? Number(data.auto_dip_mm) : null,
-        radar_dip_mm: data.radar_dip_mm != null ? Number(data.radar_dip_mm) : null,
+        auto_dip_mm: tank.auto_dip_available ? Number(data.auto_dip_mm) : null,
+        radar_dip_mm: tank.radar_available ? Number(data.radar_dip_mm) : null,
         water_dip_mm: Number(data.water_dip_mm),
         sludge_dip_mm: Number(data.sludge_dip_mm),
-        temperature: data.temperature != null ? Number(data.temperature) : null,
+        temperature: Number(data.temperature),
         temperature_unit: data.temperature_unit,
-        density: data.density != null ? Number(data.density) : null,
-        tank_status_id: data.tank_status_id != null ? Number(data.tank_status_id) : null,
-        custom_tank_status: data.custom_tank_status,
+        density: Number(data.density),
+        tank_status_id: Number(data.tank_status_id),
+        custom_tank_status: status?.allow_custom ? data.custom_tank_status?.trim() : undefined,
         operator_id: Number(data.operator_id),
-        remarks: data.remarks,
-      });
-      setSuccessMsg('Dip record created successfully');
-      reset();
+        remarks: data.remarks?.trim(),
+      };
+
+      if (recheckTarget) {
+        await api.recheckDip(recheckTarget.id, payload, payload.operator_id, payload.remarks);
+        setMessage(`Recheck for ${recheckTarget.record_number} recorded and submitted for final verification.`);
+      } else {
+        const record = await api.createDipRecord(payload);
+        if (submitForReview) {
+          await api.submitDipRecord(record.id);
+          setMessage(`${record.record_number} saved and submitted to Shift In-Charge.`);
+        } else {
+          setMessage(`${record.record_number} saved as Draft.`);
+        }
+      }
+
+      useToastStore.getState().addToast(recheckTarget ? 'Recheck submitted' : (submitForReview ? 'Dip submitted for verification' : 'Dip saved as draft'), 'success');
+      resetEntry();
+      await loadRechecks();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to create dip record');
+      const text = err instanceof Error ? err.message : String(err || 'Failed to save Dip Record');
+      setMessage(text);
+      useToastStore.getState().addToast(text, 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const comparisonRows = useMemo(() => [
+    ['Gross vs Auto', grossAuto],
+    ['Gross vs Radar', grossRadar],
+    ['Auto vs Radar', autoRadar],
+  ] as const, [grossAuto, grossRadar, autoRadar]);
+
   if (loading) {
-    return (
-      <div className="loading-state">
-        <div className="loading-spinner" />
-        <span>Loading...</span>
-      </div>
-    );
+    return <div className="loading-state"><div className="loading-spinner" /><span>Loading...</span></div>;
   }
 
   return (
-    <div className="h-full flex flex-col anim-fade-up">
-      <h2 className="text-xl font-bold text-dragon-text mb-4">New Dip Entry</h2>
-
-      {successMsg && (
-        <div className="notice-banner success mb-3">
-          {successMsg}
+    <div className="h-full flex flex-col gap-4 anim-fade-up">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-dragon-text">New Dip Entry</h2>
+          <p className="text-xs text-dragon-text-muted mt-1">Record the physical observation, then submit it for Shift In-Charge verification.</p>
         </div>
-      )}
-      {errorMsg && (
-        <div className="notice-banner error mb-3">
-          {errorMsg}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="glass-card p-4 overflow-auto flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {activeShifts.length > 0 && (
-            <div>
-              <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-                Shift <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register('shift_id', { valueAsNumber: true })}
-                className="input-field"
-              >
-                {activeShifts.map((sh) => (
-                  <option key={sh.shift_id} value={sh.shift_id}>
-                    {sh.shift_name}
-                  </option>
-                ))}
-              </select>
-              {errors.shift_id && (
-                <p className="text-dragon-danger text-xs mt-1">{errors.shift_id.message}</p>
-              )}
-            </div>
-          )}
-          {activeShifts.length === 0 && (
-            <div className="notice-banner warning">
-              No active shifts. Please configure shifts in Shift Closing.
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Tank <span className="text-red-500">*</span>
-            </label>
-            <select
-              {...register('tank_id', { valueAsNumber: true })}
-              className="input-field"
-            >
-              <option value="">Select tank...</option>
-              {tanks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.tank_no} - {t.location}
-                </option>
-              ))}
-            </select>
-            {errors.tank_id && (
-              <p className="text-dragon-danger text-xs mt-1">{errors.tank_id.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Product <span className="text-red-500">*</span>
-            </label>
-            <select
-              {...register('product_id', { valueAsNumber: true })}
-              className="input-field"
-            >
-              <option value="">Select product...</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.code})
-                </option>
-              ))}
-            </select>
-            {errors.product_id && (
-              <p className="text-dragon-danger text-xs mt-1">{errors.product_id.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Operator
-            </label>
-            <select
-              {...register('operator_id', { valueAsNumber: true })}
-              className="input-field"
-            >
-              <option value="">Select operator...</option>
-              {operators.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name} ({o.employee_id})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Gross Dip (mm) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              {...register('gross_dip_mm', { valueAsNumber: true })}
-              className="input-field"
-              placeholder="0.0"
-            />
-            {errors.gross_dip_mm && (
-              <p className="text-dragon-danger text-xs mt-1">{errors.gross_dip_mm.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Auto Dip (mm)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              {...register('auto_dip_mm', { valueAsNumber: true })}
-              className="input-field"
-              placeholder="0.0"
-              disabled={!selectedTank?.auto_dip_available}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Radar Dip (mm)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              {...register('radar_dip_mm', { valueAsNumber: true })}
-              className="input-field"
-              placeholder="0.0"
-              disabled={!selectedTank?.radar_available}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Water Dip (mm)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              {...register('water_dip_mm', { valueAsNumber: true })}
-              className="input-field"
-              placeholder="0.0"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Sludge Dip (mm)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              {...register('sludge_dip_mm', { valueAsNumber: true })}
-              className="input-field"
-              placeholder="0.0"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Temperature
-            </label>
-            <div className="flex gap-1">
-              <input
-                type="number"
-                step="0.1"
-                {...register('temperature', { valueAsNumber: true })}
-                className="flex-1 input-field"
-                placeholder="--"
-              />
-              <select
-                {...register('temperature_unit')}
-                className="input-field w-16"
-              >
-                <option value="C">C</option>
-                <option value="F">F</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Density
-            </label>
-            <input
-              type="number"
-              step="0.0001"
-              {...register('density', { valueAsNumber: true })}
-              className="input-field"
-              placeholder="0.0000"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Tank Status
-            </label>
-            <select
-              {...register('tank_status_id', { valueAsNumber: true })}
-              className="input-field"
-            >
-              <option value="">Select status...</option>
-              {statuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-              Custom Status
-            </label>
-            <input
-              {...register('custom_tank_status')}
-              className="input-field"
-              placeholder="Custom status..."
-            />
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Remarks</label>
-          <textarea
-            {...register('remarks')}
-            className="input-field resize-none"
-            rows={2}
-            placeholder="Any remarks..."
-          />
-        </div>
-
-        <div className="flex gap-2 mt-4">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn btn-primary"
-          >
-            {submitting ? 'Saving...' : 'Save Dip Record'}
+        {recheckTarget && (
+          <button type="button" onClick={clearRecheck} className="btn btn-secondary flex items-center gap-1.5">
+            <RotateCcw size={14} /> Cancel Recheck
           </button>
+        )}
+      </div>
+
+      {recheckRecords.length > 0 && !recheckTarget && (
+        <div className="glass-panel p-4 border border-dragon-warning/40">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle size={16} className="text-dragon-warning" />
+            <h3 className="text-sm font-semibold text-dragon-text">Physical Recheck Required</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {recheckRecords.map((r) => (
+              <button key={r.id} type="button" onClick={() => startRecheck(r)} className="btn btn-secondary btn-sm">
+                {r.tank_no} · {r.record_number} · {r.date} {r.time}
+              </button>
+            ))}
+          </div>
         </div>
+      )}
+
+      {recheckTarget && (
+        <div className="notice-banner warning">
+          Recheck mode: original record <strong>{recheckTarget.record_number}</strong>, Tank <strong>{recheckTarget.tank_no}</strong>. The original reading will remain preserved.
+        </div>
+      )}
+      {message && <div className="notice-banner info">{message}</div>}
+
+      <form className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 flex-1 min-h-0">
+        <div className="glass-card p-4 overflow-auto space-y-5">
+          <section>
+            <h3 className="text-sm font-semibold text-dragon-text mb-3">General Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <Field label="Date" required error={errors.date?.message}>
+                <input type="date" {...register('date')} className="input-field" />
+              </Field>
+              <Field label="Time (HH:MM)" required error={errors.time?.message}>
+                <input type="time" step="60" {...register('time')} className="input-field" />
+              </Field>
+              <Field label="Shift" required error={errors.shift_id?.message}>
+                <select {...register('shift_id', { valueAsNumber: true })} className="input-field" disabled={Boolean(recheckTarget)}>
+                  <option value="">Select shift...</option>
+                  {activeShifts.map((sh) => <option key={sh.shift_id} value={sh.shift_id}>{sh.shift_name}</option>)}
+                </select>
+              </Field>
+              <Field label="Tank No." required error={errors.tank_id?.message}>
+                <select {...register('tank_id', { valueAsNumber: true })} className="input-field" disabled={Boolean(recheckTarget)}>
+                  <option value="">Select tank...</option>
+                  {tanks.map((t) => <option key={t.id} value={t.id}>{t.tank_no} - {t.location}</option>)}
+                </select>
+              </Field>
+              <Field label="Product Type" required error={errors.product_id?.message}>
+                <select {...register('product_id', { valueAsNumber: true })} className="input-field" disabled={Boolean(recheckTarget)}>
+                  <option value="">Select product...</option>
+                  {products.map((p) => <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>)}
+                </select>
+              </Field>
+              <Field label="Reference Point" required>
+                <div className={`input-field min-h-[38px] flex items-center ${selectedTank?.reference_point ? 'text-dragon-text' : 'text-dragon-danger'}`}>
+                  {selectedTank?.reference_point || 'Not configured in Tank Master'}
+                </div>
+              </Field>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold text-dragon-text mb-3">Gauging Observations</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <Field label="Gross Dip (mm)" required error={errors.gross_dip_mm?.message}>
+                <input type="number" step="0.1" {...register('gross_dip_mm', { valueAsNumber: true })} className="input-field" />
+              </Field>
+              <Field label={`Auto Dip (mm)${selectedTank?.auto_dip_available ? ' *' : ''}`} error={errors.auto_dip_mm?.message}>
+                <input type="number" step="0.1" {...register('auto_dip_mm', { valueAsNumber: true })} className="input-field" disabled={!selectedTank?.auto_dip_available} placeholder={selectedTank?.auto_dip_available ? '' : 'Not applicable'} />
+              </Field>
+              <Field label={`Radar Dip (mm)${selectedTank?.radar_available ? ' *' : ''}`} error={errors.radar_dip_mm?.message}>
+                <input type="number" step="0.1" {...register('radar_dip_mm', { valueAsNumber: true })} className="input-field" disabled={!selectedTank?.radar_available} placeholder={selectedTank?.radar_available ? '' : 'Not applicable'} />
+              </Field>
+              <Field label="Water Dip (mm)" required error={errors.water_dip_mm?.message}>
+                <input type="number" step="0.1" {...register('water_dip_mm', { valueAsNumber: true })} className="input-field" />
+              </Field>
+              <Field label="Sludge Dip (mm)" required error={errors.sludge_dip_mm?.message}>
+                <input type="number" step="0.1" {...register('sludge_dip_mm', { valueAsNumber: true })} className="input-field" />
+              </Field>
+              <Field label="Temperature" required error={errors.temperature?.message}>
+                <div className="flex gap-1">
+                  <input type="number" step="0.1" {...register('temperature', { valueAsNumber: true })} className="input-field flex-1" />
+                  <select {...register('temperature_unit')} className="input-field w-20">
+                    <option value="C">°C</option>
+                    <option value="F">°F</option>
+                  </select>
+                </div>
+              </Field>
+              <Field label="Density" required error={errors.density?.message}>
+                <input type="number" step="0.0001" {...register('density', { valueAsNumber: true })} className="input-field" />
+              </Field>
+              <Field label="Tank Status" required error={errors.tank_status_id?.message}>
+                <select {...register('tank_status_id', { valueAsNumber: true })} className="input-field">
+                  <option value="">Select status...</option>
+                  {statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </Field>
+              {selectedStatus?.allow_custom && (
+                <Field label="Custom Status / Details" required>
+                  <input {...register('custom_tank_status')} className="input-field" placeholder="Enter custom Tank status" />
+                </Field>
+              )}
+              <Field label="Dip Performed By" required error={errors.operator_id?.message}>
+                <select {...register('operator_id', { valueAsNumber: true })} className="input-field">
+                  <option value="">Select operator...</option>
+                  {operators.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.employee_id})</option>)}
+                </select>
+              </Field>
+            </div>
+          </section>
+
+          <section>
+            <Field label="Remarks" error={errors.remarks?.message}>
+              <textarea {...register('remarks')} className="input-field resize-none" rows={3} placeholder="Operational observation / remarks..." />
+            </Field>
+          </section>
+
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-dragon-border">
+            {!recheckTarget && (
+              <button type="button" disabled={submitting} onClick={handleSubmit((data) => save(data, false))} className="btn btn-secondary">
+                {submitting ? 'Saving...' : 'Save Draft'}
+              </button>
+            )}
+            <button type="button" disabled={submitting || activeShifts.length === 0} onClick={handleSubmit((data) => save(data, true))} className="btn btn-primary">
+              {submitting ? 'Saving...' : recheckTarget ? 'Record & Submit Recheck' : 'Save & Submit for Verification'}
+            </button>
+          </div>
+        </div>
+
+        <aside className="space-y-3 overflow-auto">
+          <div className="glass-panel p-4">
+            <h3 className="text-sm font-semibold text-dragon-text mb-3">Tank Reference</h3>
+            {selectedTank ? (
+              <div className="space-y-2 text-xs">
+                <Info label="Tank" value={selectedTank.tank_no} />
+                <Info label="Location" value={selectedTank.location || '--'} />
+                <Info label="Reference Point" value={selectedTank.reference_point || 'MISSING'} danger={!selectedTank.reference_point} />
+                <Info label="Auto Dip" value={selectedTank.auto_dip_available ? 'Available' : 'N/A'} />
+                <Info label="Radar" value={selectedTank.radar_available ? 'Available' : 'N/A'} />
+                <Info label="Safe Fill" value={selectedTank.safe_fill_height != null ? `${selectedTank.safe_fill_height} mm` : '--'} />
+              </div>
+            ) : <p className="text-xs text-dragon-text-muted">Select a Tank to view Master Data.</p>}
+          </div>
+
+          <div className="glass-panel p-4">
+            <h3 className="text-sm font-semibold text-dragon-text mb-3">Dip Comparison</h3>
+            <div className="space-y-2 text-xs">
+              <Info label="Gross Dip" value={finite(gross) != null ? `${finite(gross)?.toFixed(1)} mm` : '--'} />
+              <Info label="Auto Dip" value={finite(auto) != null ? `${finite(auto)?.toFixed(1)} mm` : '--'} />
+              <Info label="Radar Dip" value={finite(radar) != null ? `${finite(radar)?.toFixed(1)} mm` : '--'} />
+              <div className="border-t border-dragon-border my-2" />
+              {comparisonRows.map(([label, value]) => <Info key={label} label={label} value={value == null ? '--' : `${value > 0 ? '+' : ''}${value.toFixed(1)} mm`} />)}
+            </div>
+            <div className="mt-3 flex items-start gap-2 text-[10px] text-dragon-text-muted">
+              <CheckCircle2 size={13} className="mt-0.5 flex-none" />
+              Approved Tank/Product/Location tolerances are evaluated by the backend when the record is submitted.
+            </div>
+          </div>
+        </aside>
       </form>
+    </div>
+  );
+}
+
+function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-dragon-text-secondary mb-1">{label}{required && <span className="text-red-500"> *</span>}</label>
+      {children}
+      {error && <p className="text-dragon-danger text-xs mt-1">{error}</p>}
+    </div>
+  );
+}
+
+function Info({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-dragon-text-secondary">{label}</span>
+      <span className={`font-mono text-right ${danger ? 'text-dragon-danger' : 'text-dragon-text'}`}>{value}</span>
     </div>
   );
 }
