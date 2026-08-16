@@ -4,6 +4,7 @@ import type {
   User,
   DashboardStats,
   AttentionItem,
+  TankGaugingStatus,
   DipRecord,
   DipRecordWithRelations,
   DipCorrection,
@@ -94,10 +95,21 @@ export async function getAttentionList(): Promise<AttentionItem[]> {
   return invoke('get_attention_list');
 }
 
+export async function getShiftGaugingStatus(shiftId: number): Promise<TankGaugingStatus[]> {
+  return invoke('get_shift_gauging_status', { shiftId });
+}
+
 // ── Dip Records ──
 
 export async function createDipRecord(data: CreateDipPayload): Promise<DipRecord> {
   return invoke('create_dip_record', { data });
+}
+
+export async function updateDipRecord(
+  id: number,
+  data: Partial<CreateDipPayload>,
+): Promise<DipRecord> {
+  return invoke('update_dip_record', { id, data });
 }
 
 export async function getDipRecord(id: number): Promise<DipRecord> {

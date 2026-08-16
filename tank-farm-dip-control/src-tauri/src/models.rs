@@ -393,8 +393,20 @@ pub struct ApplicationSetting {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CurrentShiftInfo {
+    pub shift_id: i64,
+    pub shift_name: String,
+    pub start_time: String,
+    pub end_time: String,
+    pub supervisor: Option<String>,
+    pub in_charge: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardStats {
     pub active_tanks: i64,
+    pub tanks_expected: i64,
+    pub tanks_gauged_today: i64,
     pub dips_completed: i64,
     pub dips_pending: i64,
     pub awaiting_review: i64,
@@ -402,6 +414,31 @@ pub struct DashboardStats {
     pub abnormal_diff: i64,
     pub approved: i64,
     pub shift_closing_status: String,
+    pub current_shift: Option<CurrentShiftInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TankGaugingStatus {
+    pub tank_id: i64,
+    pub tank_no: String,
+    pub product_name: String,
+    pub location: Option<String>,
+    pub tank_status_name: String,
+    /// 'gauged' when a submitted/approved record exists, 'draft' when only a draft
+    /// exists, 'missing' when the expected Tank has no record for the shift/date.
+    pub status: String,
+    pub dip_id: Option<i64>,
+    pub record_number: Option<String>,
+    pub gross_dip_mm: Option<f64>,
+    pub auto_dip_mm: Option<f64>,
+    pub radar_dip_mm: Option<f64>,
+    pub water_dip_mm: Option<f64>,
+    pub sludge_dip_mm: Option<f64>,
+    pub gross_auto_difference: Option<f64>,
+    pub gross_radar_difference: Option<f64>,
+    pub operator_name: Option<String>,
+    pub review_status: Option<String>,
+    pub record_status: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

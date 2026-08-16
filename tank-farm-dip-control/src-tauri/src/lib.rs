@@ -63,6 +63,7 @@ pub fn run() {
             commands::auth::toggle_user_active,
             commands::dashboard::get_dashboard_stats,
             commands::dashboard::get_attention_list,
+            commands::dashboard::get_shift_gauging_status,
             commands::dips::create_dip_record,
             commands::dips::update_dip_record,
             commands::dips::submit_dip_record,

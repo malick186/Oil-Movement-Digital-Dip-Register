@@ -2,6 +2,40 @@ import { useState, useEffect } from 'react';
 import * as api from '../services/api';
 import type { Exception } from '../types';
 import { useToastStore } from '../store/toastStore';
+import { AlertTriangle } from 'lucide-react';
+
+/** Suggested reviewer action per exception type (spec §33). Mirrors the backend
+ *  action_required helper in src-tauri/src/commands/exceptions.rs. */
+function actionRequired(e: Exception): string {
+  switch (e.exception_type) {
+    case 'Gross vs Auto':
+    case 'Gross vs Radar':
+    case 'Auto vs Radar':
+      return e.severity === 'critical'
+        ? 'Re-measure and re-dip the Tank'
+        : e.severity === 'warning'
+          ? 'Review readings and confirm tolerance'
+          : 'Monitor and confirm readings';
+    case 'Missing Radar Dip': return 'Record Radar reading if gauge is available';
+    case 'Missing Auto Dip': return 'Record Auto Dip reading if available';
+    case 'Missing Gross Dip': return 'Record the physical Gross Dip';
+    case 'Missing Temperature': return 'Record the observed temperature';
+    case 'Missing Density': return 'Record the observed density';
+    case 'Missing Operator': return 'Assign the Dip Performed By operator';
+    case 'Missing Tank Status': return 'Select the Tank Status';
+    case 'Unusual Water Dip': return 'Verify Water Dip against previous readings';
+    case 'Unusual Sludge Dip': return 'Verify Sludge Dip against previous readings';
+    case 'Gross Dip above Safe Fill Height': return 'Confirm Tank level; do not exceed Safe Fill Height';
+    case 'Gross Dip below Minimum Operating Level': return 'Confirm Tank level against operating limit';
+    case 'Water Dip above Reference Gauge Height': return 'Verify Water Dip reading';
+    case 'Tank overdue for gauging': return 'Perform Tank gauging';
+    case 'Dip not reviewed': return 'Review the Dip Record';
+    case 'Recheck pending': return 'Complete the recheck';
+    case 'Correction pending': return 'Approve or reject the correction';
+    case 'Shift Closing pending': return 'Complete Shift Closing';
+    default: return 'Review and resolve';
+  }
+}
 
 export default function Exceptions() {
   const [exceptions, setExceptions] = useState<Exception[]>([]);
@@ -9,11 +43,14 @@ export default function Exceptions() {
   const [resolving, setResolving] = useState(false);
   const [resolution, setResolution] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'open' | 'resolved' | 'all'>('open');
 
   const loadExceptions = async () => {
     setLoading(true);
     try {
-      const data = await api.listExceptions();
+      const data = await api.listExceptions({
+        status: statusFilter === 'all' ? undefined : statusFilter,
+      });
       setExceptions(data);
     } catch {
       useToastStore.getState().addToast('Failed to load exceptions', 'error');
@@ -24,7 +61,8 @@ export default function Exceptions() {
 
   useEffect(() => {
     loadExceptions();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
   const handleResolve = async () => {
     if (!selectedId || !resolution) return;
@@ -52,19 +90,41 @@ export default function Exceptions() {
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-xl font-bold text-dragon-text mb-4">Exceptions</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={20} className="text-dragon-warning" />
+          <h2 className="text-xl font-bold text-dragon-text">Exception Control Center</h2>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-dragon-border p-0.5 text-xs">
+          {(['open', 'resolved', 'all'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1 rounded-md capitalize transition-colors ${
+                statusFilter === s
+                  ? 'bg-dragon-primary/15 text-dragon-primary font-medium'
+                  : 'text-dragon-text-muted hover:text-dragon-text'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="glass-panel rounded-xl overflow-hidden overflow-auto flex-1">
         <table className="data-table w-full text-xs">
           <thead>
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">ID</th>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Type</th>
               <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Severity</th>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Actual</th>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Expected Tolerance</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Tank</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Product</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Date / Time</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Exception Type</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Actual Value</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Expected / Tolerance</th>
+              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Action Required</th>
               <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Status</th>
-              <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Created</th>
               <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Resolution</th>
               <th className="text-center px-3 py-2 font-medium text-dragon-text-secondary">Actions</th>
             </tr>
@@ -72,15 +132,13 @@ export default function Exceptions() {
           <tbody>
             {exceptions.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-8 text-dragon-text-muted">
+                <td colSpan={11} className="text-center py-8 text-dragon-text-muted">
                   No exceptions found
                 </td>
               </tr>
             ) : (
               exceptions.map((e) => (
                 <tr key={e.id}>
-                  <td className="px-3 py-2 font-mono text-dragon-text">{e.id}</td>
-                  <td className="px-3 py-2 text-dragon-text-secondary">{e.exception_type}</td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] ${
                       e.severity === 'critical' ? 'bg-dragon-danger/20 text-dragon-danger' :
@@ -90,8 +148,15 @@ export default function Exceptions() {
                       {e.severity}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-dragon-text-secondary">{e.actual_value}</td>
-                  <td className="px-3 py-2 text-dragon-text-secondary">{e.expected_tolerance}</td>
+                  <td className="px-3 py-2 font-medium text-dragon-text">{e.tank_no || '--'}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{e.product_name || '--'}</td>
+                  <td className="px-3 py-2 text-dragon-text-muted">
+                    {e.date ? `${e.date}${e.time ? ` ${e.time}` : ''}` : '--'}
+                  </td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{e.exception_type}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{e.actual_value || '--'}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{e.expected_tolerance || '--'}</td>
+                  <td className="px-3 py-2 text-dragon-text-muted max-w-[200px]">{actionRequired(e)}</td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] ${
                       e.status === 'resolved' ? 'bg-dragon-success/20 text-dragon-success' :
@@ -101,7 +166,6 @@ export default function Exceptions() {
                       {e.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-dragon-text-muted">{e.created_at}</td>
                   <td className="px-3 py-2 text-dragon-text-muted max-w-[120px] truncate">{e.resolution || '--'}</td>
                   <td className="px-3 py-2 text-center">
                     {e.status !== 'resolved' && (

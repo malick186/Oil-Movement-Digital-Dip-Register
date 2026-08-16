@@ -155,6 +155,53 @@ pub fn close_shift(
         ));
     }
 
+    // Spec §28: a shift cannot close while an expected Tank has not been gauged.
+    // Administrator can relax this via the 'shift_close_block_missing_tanks' setting.
+    let block_missing: bool = conn
+        .query_row(
+            "SELECT COALESCE(value,'1') FROM application_settings WHERE key='shift_close_block_missing_tanks'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .map(|v| v != "0")
+        .unwrap_or(true);
+
+    if block_missing {
+        let missing: Vec<String> = {
+            let mut stmt = conn
+                .prepare(
+                    "SELECT t.tank_no FROM tanks t
+                     WHERE t.active=1
+                       AND NOT EXISTS (
+                           SELECT 1 FROM dip_records d
+                           WHERE d.tank_id=t.id AND d.shift_id=?1 AND d.date=?2
+                             AND d.record_status NOT IN ('draft','rejected')
+                       )
+                     ORDER BY t.tank_no",
+                )
+                .map_err(|e| e.to_string())?;
+            let rows = stmt
+                .query_map(params![shift_id, today], |row| row.get::<_, String>(0))
+                .map_err(|e| e.to_string())?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?;
+            rows
+        };
+
+        if !missing.is_empty() {
+            let mut list = missing.join(", ");
+            if list.len() > 300 {
+                list.truncate(300);
+                list.push_str("...");
+            }
+            return Err(format!(
+                "Shift cannot be closed: {} expected Tank(s) have not been gauged: {}",
+                missing.len(),
+                list
+            ));
+        }
+    }
+
     conn.execute(
         "INSERT INTO shift_closings (date, shift_id, closed_by, closing_remarks, total_dips, total_exceptions, pending_items, status)
          VALUES (?1, ?2, ?3, ?4, ?5, 0, 0, 'closed')",

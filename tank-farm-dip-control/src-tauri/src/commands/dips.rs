@@ -662,6 +662,8 @@ pub(crate) fn rebuild_exceptions_for_record(conn: &rusqlite::Connection, dip_id:
         .map_err(|e| format!("Failed to refresh exceptions: {}", e))?;
 
     let record = get_dip_record_by_id_raw(conn, dip_id)?;
+
+    // 1. Tolerance comparison exceptions (§20).
     if let Some(value) = record.gross_auto_difference {
         check_single_tolerance(conn, &record, "gross_auto", "Gross vs Auto", value)?;
     }
@@ -671,6 +673,188 @@ pub(crate) fn rebuild_exceptions_for_record(conn: &rusqlite::Connection, dip_id:
     if let Some(value) = record.auto_radar_difference {
         check_single_tolerance(conn, &record, "auto_radar", "Auto vs Radar", value)?;
     }
+
+    // 2. Missing readings / fields (§33). Operator and Tank Status are NOT NULL in
+    // the schema, so only the optional measurement fields can be missing here.
+    let (radar_available, auto_available): (i64, i64) = conn
+        .query_row(
+            "SELECT radar_available, auto_dip_available FROM tanks WHERE id=?1",
+            params![record.tank_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap_or((0, 0));
+
+    if radar_available == 1 && record.radar_dip_mm.is_none() {
+        insert_exception(
+            conn,
+            record.id,
+            record.tank_id,
+            "Missing Radar Dip",
+            "warning",
+            Some("Radar reading not recorded".to_string()),
+            Some("Radar Dip is required for this Tank".to_string()),
+        )?;
+    }
+    if auto_available == 1 && record.auto_dip_mm.is_none() {
+        insert_exception(
+            conn,
+            record.id,
+            record.tank_id,
+            "Missing Auto Dip",
+            "warning",
+            Some("Auto Dip reading not recorded".to_string()),
+            Some("Auto Dip is required for this Tank".to_string()),
+        )?;
+    }
+    if record.gross_dip_mm.is_none() {
+        insert_exception(
+            conn,
+            record.id,
+            record.tank_id,
+            "Missing Gross Dip",
+            "critical",
+            Some("Gross Dip not recorded".to_string()),
+            Some("Gross Dip is required".to_string()),
+        )?;
+    }
+    if record.temperature.is_none() {
+        insert_exception(
+            conn,
+            record.id,
+            record.tank_id,
+            "Missing Temperature",
+            "warning",
+            Some("Temperature not recorded".to_string()),
+            Some("Temperature is required".to_string()),
+        )?;
+    }
+    if record.density.is_none() {
+        insert_exception(
+            conn,
+            record.id,
+            record.tank_id,
+            "Missing Density",
+            "warning",
+            Some("Density not recorded".to_string()),
+            Some("Density is required".to_string()),
+        )?;
+    }
+
+    // 3. Water / Sludge "Significant change from previous Dip" (§21).
+    let threshold: f64 = conn
+        .query_row(
+            "SELECT COALESCE(CAST(value AS REAL),100.0) FROM application_settings
+             WHERE key='water_sludge_change_threshold_mm'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(100.0);
+    let previous: Option<(Option<f64>, Option<f64>)> = conn
+        .query_row(
+            "SELECT water_dip_mm, sludge_dip_mm FROM dip_records
+             WHERE tank_id=?1 AND id<?2 AND (date < ?3 OR (date = ?3 AND time < ?4))
+               AND record_status NOT IN ('draft','rejected','superseded')
+             ORDER BY date DESC, time DESC, id DESC LIMIT 1",
+            params![record.tank_id, record.id, record.date, record.time],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .ok();
+    if let Some((prev_water, prev_sludge)) = previous {
+        if let (Some(cur), Some(prev)) = (record.water_dip_mm, prev_water) {
+            if cur - prev > threshold {
+                insert_exception(
+                    conn,
+                    record.id,
+                    record.tank_id,
+                    "Unusual Water Dip",
+                    "warning",
+                    Some(format!("{:.1} mm vs previous {:.1} mm", cur, prev)),
+                    Some(format!("Significant change threshold {:.1} mm", threshold)),
+                )?;
+            }
+        }
+        if let (Some(cur), Some(prev)) = (record.sludge_dip_mm, prev_sludge) {
+            if cur - prev > threshold {
+                insert_exception(
+                    conn,
+                    record.id,
+                    record.tank_id,
+                    "Unusual Sludge Dip",
+                    "warning",
+                    Some(format!("{:.1} mm vs previous {:.1} mm", cur, prev)),
+                    Some(format!("Significant change threshold {:.1} mm", threshold)),
+                )?;
+            }
+        }
+    }
+
+    // 4. Dip values against Tank dimensions (§42).
+    let (safe_fill_height, min_operating_level, ref_gauge_height): (Option<f64>, Option<f64>, Option<f64>) =
+        conn
+            .query_row(
+                "SELECT safe_fill_height, min_operating_level, ref_gauge_height FROM tanks WHERE id=?1",
+                params![record.tank_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap_or((None, None, None));
+    if let (Some(gross), Some(safe)) = (record.gross_dip_mm, safe_fill_height) {
+        if gross > safe {
+            insert_exception(
+                conn,
+                record.id,
+                record.tank_id,
+                "Gross Dip above Safe Fill Height",
+                "warning",
+                Some(format!("{:.1} mm", gross)),
+                Some(format!("Safe Fill Height {:.1} mm", safe)),
+            )?;
+        }
+    }
+    if let (Some(gross), Some(min_level)) = (record.gross_dip_mm, min_operating_level) {
+        if gross < min_level {
+            insert_exception(
+                conn,
+                record.id,
+                record.tank_id,
+                "Gross Dip below Minimum Operating Level",
+                "info",
+                Some(format!("{:.1} mm", gross)),
+                Some(format!("Min Operating Level {:.1} mm", min_level)),
+            )?;
+        }
+    }
+    if let (Some(water), Some(rgh)) = (record.water_dip_mm, ref_gauge_height) {
+        if water > rgh {
+            insert_exception(
+                conn,
+                record.id,
+                record.tank_id,
+                "Water Dip above Reference Gauge Height",
+                "warning",
+                Some(format!("{:.1} mm", water)),
+                Some(format!("Ref Gauge Height {:.1} mm", rgh)),
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
+fn insert_exception(
+    conn: &rusqlite::Connection,
+    dip_id: i64,
+    tank_id: i64,
+    exception_type: &str,
+    severity: &str,
+    actual_value: Option<String>,
+    expected_tolerance: Option<String>,
+) -> Result<(), String> {
+    conn.execute(
+        "INSERT INTO exceptions (dip_record_id, tank_id, exception_type, severity, actual_value, expected_tolerance, status)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'open')",
+        params![dip_id, tank_id, exception_type, severity, actual_value, expected_tolerance],
+    )
+    .map_err(|e| format!("Failed to create exception: {}", e))?;
     Ok(())
 }
 

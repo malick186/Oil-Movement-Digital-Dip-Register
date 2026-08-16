@@ -5,7 +5,8 @@ import { dipEntrySchema, type DipEntryFormData } from '../validation/schemas';
 import type { DipRecordWithRelations, Operator, Product, ShiftStatus, Tank, TankStatus } from '../types';
 import * as api from '../services/api';
 import { useToastStore } from '../store/toastStore';
-import { AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
+import { useAppStore } from '../store/appStore';
+import { AlertTriangle, CheckCircle2, FilePenLine, RotateCcw } from 'lucide-react';
 
 function localDate() {
   const now = new Date();
@@ -39,9 +40,14 @@ export default function NewDip() {
   const [activeShifts, setActiveShifts] = useState<ShiftStatus[]>([]);
   const [recheckRecords, setRecheckRecords] = useState<DipRecordWithRelations[]>([]);
   const [recheckTarget, setRecheckTarget] = useState<DipRecordWithRelations | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingRecordNumber, setEditingRecordNumber] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  const editDipRecordId = useAppStore((s) => s.editDipRecordId);
+  const clearEditDip = useAppStore((s) => s.clearEditDip);
 
   const {
     register,
@@ -99,6 +105,36 @@ export default function NewDip() {
         const openShifts = shifts.filter((sh) => !sh.is_closed);
         setActiveShifts(openShifts);
         if (openShifts[0]) setValue('shift_id', openShifts[0].shift_id);
+
+        // Draft edit mode: prefill the form from the selected draft record.
+        if (editDipRecordId != null) {
+          const draft = await api.getDipRecord(editDipRecordId);
+          if (draft.record_status !== 'draft') {
+            useToastStore.getState().addToast('Only draft Dip Records can be edited', 'error');
+            clearEditDip();
+          } else {
+            setEditingId(draft.id);
+            setEditingRecordNumber(draft.record_number);
+            setValue('date', draft.date);
+            setValue('time', draft.time);
+            setValue('shift_id', draft.shift_id);
+            setValue('tank_id', draft.tank_id);
+            setValue('product_id', draft.product_id);
+            setValue('gross_dip_mm', draft.gross_dip_mm ?? 0);
+            setValue('auto_dip_mm', draft.auto_dip_mm ?? undefined);
+            setValue('radar_dip_mm', draft.radar_dip_mm ?? undefined);
+            setValue('water_dip_mm', draft.water_dip_mm ?? 0);
+            setValue('sludge_dip_mm', draft.sludge_dip_mm ?? 0);
+            setValue('temperature', draft.temperature ?? 0);
+            setValue('temperature_unit', (draft.temperature_unit as 'C' | 'F') ?? 'C');
+            setValue('density', draft.density ?? 0);
+            setValue('tank_status_id', draft.tank_status_id ?? 0);
+            setValue('custom_tank_status', draft.custom_tank_status ?? '');
+            setValue('operator_id', draft.operator_id);
+            setValue('remarks', draft.remarks ?? '');
+            setMessage(`Editing draft ${draft.record_number}. Changes stay as a draft until submitted.`);
+          }
+        }
         await loadRechecks();
       } catch (err) {
         const text = err instanceof Error ? err.message : String(err || 'Failed to load reference data');
@@ -108,7 +144,7 @@ export default function NewDip() {
         setLoading(false);
       }
     })();
-  }, [setValue]);
+  }, [setValue, editDipRecordId, clearEditDip]);
 
   useEffect(() => {
     if (!selectedTank || recheckTarget) return;
@@ -148,6 +184,17 @@ export default function NewDip() {
       temperature_unit: 'C',
     });
     setRecheckTarget(null);
+    setEditingId(null);
+    setEditingRecordNumber(null);
+    clearEditDip();
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingRecordNumber(null);
+    clearEditDip();
+    resetEntry();
+    setMessage(null);
   };
 
   const save = async (data: DipEntryFormData, submitForReview: boolean) => {
@@ -162,7 +209,9 @@ export default function NewDip() {
       if (tank.radar_available && finite(data.radar_dip_mm) == null) throw new Error('Radar Dip is required for this Tank');
       if (status?.allow_custom && !data.custom_tank_status?.trim()) throw new Error('Custom Tank Status details are required');
 
-      const duplicate = await api.checkDuplicateDip(Number(data.tank_id), data.date, data.time, Number(data.shift_id));
+      const duplicate = editingId == null
+        ? await api.checkDuplicateDip(Number(data.tank_id), data.date, data.time, Number(data.shift_id))
+        : '';
       if (duplicate && !window.confirm(`${duplicate}\n\nContinue anyway?`)) {
         setSubmitting(false);
         return;
@@ -192,6 +241,14 @@ export default function NewDip() {
       if (recheckTarget) {
         await api.recheckDip(recheckTarget.id, payload, payload.operator_id, payload.remarks);
         setMessage(`Recheck for ${recheckTarget.record_number} recorded and submitted for final verification.`);
+      } else if (editingId != null) {
+        const record = await api.updateDipRecord(editingId, payload);
+        if (submitForReview) {
+          await api.submitDipRecord(record.id);
+          setMessage(`${record.record_number} updated and submitted to Shift In-Charge.`);
+        } else {
+          setMessage(`${record.record_number} draft updated.`);
+        }
       } else {
         const record = await api.createDipRecord(payload);
         if (submitForReview) {
@@ -202,7 +259,11 @@ export default function NewDip() {
         }
       }
 
-      useToastStore.getState().addToast(recheckTarget ? 'Recheck submitted' : (submitForReview ? 'Dip submitted for verification' : 'Dip saved as draft'), 'success');
+      useToastStore.getState().addToast(
+        recheckTarget ? 'Recheck submitted'
+          : editingId != null ? (submitForReview ? 'Dip updated and submitted' : 'Draft updated')
+          : (submitForReview ? 'Dip submitted for verification' : 'Dip saved as draft'),
+        'success');
       resetEntry();
       await loadRechecks();
     } catch (err) {
@@ -231,6 +292,11 @@ export default function NewDip() {
           <h2 className="text-xl font-bold text-dragon-text">New Dip Entry</h2>
           <p className="text-xs text-dragon-text-muted mt-1">Record the physical observation, then submit it for Shift In-Charge verification.</p>
         </div>
+        {editingId != null && (
+          <button type="button" onClick={cancelEdit} className="btn btn-secondary flex items-center gap-1.5">
+            <RotateCcw size={14} /> Cancel Edit
+          </button>
+        )}
         {recheckTarget && (
           <button type="button" onClick={clearRecheck} className="btn btn-secondary flex items-center gap-1.5">
             <RotateCcw size={14} /> Cancel Recheck
@@ -257,6 +323,14 @@ export default function NewDip() {
       {recheckTarget && (
         <div className="notice-banner warning">
           Recheck mode: original record <strong>{recheckTarget.record_number}</strong>, Tank <strong>{recheckTarget.tank_no}</strong>. The original reading will remain preserved.
+        </div>
+      )}
+      {editingId != null && (
+        <div className="notice-banner info flex items-start gap-2">
+          <FilePenLine size={13} className="mt-0.5 flex-none" />
+          <span>
+            Editing draft <strong>{editingRecordNumber}</strong>. Draft corrections do not require Shift In-Charge approval — submit when the observation is complete.
+          </span>
         </div>
       )}
       {message && <div className="notice-banner info">{message}</div>}

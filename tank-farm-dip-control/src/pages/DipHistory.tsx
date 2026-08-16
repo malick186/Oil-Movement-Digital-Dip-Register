@@ -4,6 +4,7 @@ import * as api from '../services/api';
 import DragTable, { type ColumnDef } from '../components/DragTable';
 import { useToastStore } from '../store/toastStore';
 import { useAuthStore } from '../store/authStore';
+import { useAppStore } from '../store/appStore';
 import { CheckCircle2, FilePenLine, Send } from 'lucide-react';
 
 const correctionFields = [
@@ -27,6 +28,7 @@ const correctionFields = [
 
 export default function DipHistory() {
   const user = useAuthStore((s) => s.user);
+  const startEditDip = useAppStore((s) => s.startEditDip);
   const [records, setRecords] = useState<DipRecordWithRelations[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
   const [tanks, setTanks] = useState<Tank[]>([]);
@@ -175,8 +177,17 @@ export default function DipHistory() {
     { key: 'water_dip_mm', label: 'Water', render: (r) => <span className="font-mono">{r.water_dip_mm?.toFixed(1) ?? '--'}</span> },
     { key: 'record_status', label: 'Record', render: (r) => <span className={r.record_status === 'approved' ? 'badge badge-success' : r.record_status === 'rejected' ? 'badge badge-danger' : 'badge badge-warning'}>{r.record_status}</span> },
     { key: 'approval_status', label: 'Approval', render: (r) => <span className={r.approval_status === 'approved' ? 'badge badge-success' : r.approval_status === 'rejected' ? 'badge badge-danger' : 'badge badge-warning'}>{r.approval_status}</span> },
-    { key: 'actions', label: 'Action', render: (r) => <button onClick={() => openRecord(r)} className="btn btn-secondary btn-sm">Details</button> },
-  ], []);
+    { key: 'actions', label: 'Action', render: (r) => (
+      <div className="flex gap-1.5 justify-end">
+        <button onClick={() => openRecord(r)} className="btn btn-secondary btn-sm">Details</button>
+        {r.record_status === 'draft' && (user?.role === 'Shift Supervisor' || user?.role === 'Shift In-Charge' || user?.role === 'Administrator') && (
+          <button onClick={() => startEditDip(r.id)} className="btn btn-secondary btn-sm flex items-center gap-1" title="Edit this draft">
+            <FilePenLine size={12} /> Edit
+          </button>
+        )}
+      </div>
+    ) },
+  ], [startEditDip, user?.role]);
 
   const mayRequest = user?.role === 'Shift Supervisor' || user?.role === 'Administrator';
   const mayApprove = user?.role === 'Shift In-Charge' || user?.role === 'Administrator';
@@ -210,6 +221,9 @@ export default function DipHistory() {
                 <p className="text-xs text-dragon-text-muted">{selected.tank_no} · {selected.product_name} · {selected.date} {selected.time}</p>
               </div>
               <div className="flex gap-2">
+                {maySubmitDraft && selected.record_status === 'draft' && (
+                  <button onClick={() => startEditDip(selected.id)} className="btn btn-secondary btn-sm flex items-center gap-1"><FilePenLine size={12} /> Edit Draft</button>
+                )}
                 {maySubmitDraft && selected.record_status === 'draft' && (
                   <button onClick={submitDraft} disabled={actionBusy} className="btn btn-primary btn-sm flex items-center gap-1"><Send size={12} /> Submit Draft</button>
                 )}

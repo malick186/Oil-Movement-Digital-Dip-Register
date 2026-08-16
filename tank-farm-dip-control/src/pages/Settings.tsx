@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as api from '../services/api';
 import type { Product, Tank, ToleranceSetting } from '../types';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { AlertTriangle, Plus, Save } from 'lucide-react';
 
 const emptyRule = {
   tank_id: '',
@@ -22,6 +22,8 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [blockMissingTanks, setBlockMissingTanks] = useState(true);
+  const [waterSludgeThreshold, setWaterSludgeThreshold] = useState('100');
 
   const loadData = async () => {
     setLoading(true);
@@ -36,6 +38,8 @@ export default function Settings() {
       setAppSettings(settings);
       setTanks(tankRows);
       setProducts(productRows);
+      setBlockMissingTanks(settings['shift_close_block_missing_tanks'] !== '0');
+      setWaterSludgeThreshold(settings['water_sludge_change_threshold_mm'] || '100');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : String(err || 'Failed to load Settings'));
     } finally {
@@ -95,6 +99,20 @@ export default function Settings() {
       await loadData();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : String(err || 'Reference data setup failed'));
+    }
+  };
+
+  const saveOperationalControls = async () => {
+    setSaving(true);
+    try {
+      await api.updateAppSetting('shift_close_block_missing_tanks', blockMissingTanks ? '1' : '0');
+      await api.updateAppSetting('water_sludge_change_threshold_mm', waterSludgeThreshold.trim() || '100');
+      setMessage('Operational controls saved.');
+      await loadData();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : String(err || 'Failed to save operational controls'));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -213,10 +231,47 @@ export default function Settings() {
         </div>
 
         <div className="glass-card p-4">
-          <h3 className="text-sm font-semibold text-dragon-text mb-2">Reference Data</h3>
-          <p className="text-xs text-dragon-text-muted mb-3">Ensures only default Shift names, Product types and Tank Status values. It does not create users, operators, tanks or tolerance limits.</p>
-          <button onClick={seedReferenceData} className="btn btn-secondary">Ensure Default Reference Data</button>
+          <h3 className="text-sm font-semibold text-dragon-text mb-3">Operational Controls</h3>
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={blockMissingTanks}
+                onChange={(e) => setBlockMissingTanks(e.target.checked)}
+                className="mt-0.5"
+              />
+              <div>
+                <div className="text-xs font-medium text-dragon-text">Block Shift Closing when Tanks are not gauged</div>
+                <div className="text-[11px] text-dragon-text-muted">Prevents closing a Shift while any active Tank has no Dip Record for the Shift (spec §28).</div>
+              </div>
+            </label>
+            <div>
+              <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
+                Water / Sludge significant change threshold (mm)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={waterSludgeThreshold}
+                onChange={(e) => setWaterSludgeThreshold(e.target.value)}
+                className="input-field w-40"
+              />
+              <p className="text-[11px] text-dragon-text-muted mt-1">
+                Flags an Unusual Water / Sludge Dip exception when the reading rises above the previous Dip by this amount (spec §21).
+              </p>
+            </div>
+            <button onClick={saveOperationalControls} disabled={saving} className="btn btn-primary flex items-center gap-1.5">
+              <Save size={13} /> {saving ? 'Saving...' : 'Save Controls'}
+            </button>
+          </div>
         </div>
+      </div>
+
+      <div className="glass-card p-4">
+        <h3 className="text-sm font-semibold text-dragon-text mb-2">Reference Data</h3>
+        <p className="text-xs text-dragon-text-muted mb-3">Ensures only default Shift names, Product types and Tank Status values. It does not create users, operators, tanks or tolerance limits.</p>
+        <button onClick={seedReferenceData} className="btn btn-secondary">Ensure Default Reference Data</button>
       </div>
     </div>
   );

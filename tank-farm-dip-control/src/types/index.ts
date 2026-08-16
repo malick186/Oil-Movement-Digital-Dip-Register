@@ -132,8 +132,19 @@ export interface DipCorrection {
   created_at: string;
 }
 
+export interface CurrentShiftInfo {
+  shift_id: number;
+  shift_name: string;
+  start_time: string;
+  end_time: string;
+  supervisor: string | null;
+  in_charge: string | null;
+}
+
 export interface DashboardStats {
   active_tanks: number;
+  tanks_expected: number;
+  tanks_gauged_today: number;
   dips_completed: number;
   dips_pending: number;
   awaiting_review: number;
@@ -141,6 +152,28 @@ export interface DashboardStats {
   abnormal_diff: number;
   approved: number;
   shift_closing_status: string;
+  current_shift: CurrentShiftInfo | null;
+}
+
+export interface TankGaugingStatus {
+  tank_id: number;
+  tank_no: string;
+  product_name: string;
+  location: string | null;
+  tank_status_name: string;
+  status: 'gauged' | 'draft' | 'missing';
+  dip_id: number | null;
+  record_number: string | null;
+  gross_dip_mm: number | null;
+  auto_dip_mm: number | null;
+  radar_dip_mm: number | null;
+  water_dip_mm: number | null;
+  sludge_dip_mm: number | null;
+  gross_auto_difference: number | null;
+  gross_radar_difference: number | null;
+  operator_name: string | null;
+  review_status: string | null;
+  record_status: string | null;
 }
 
 export interface AuditLog {
@@ -193,6 +226,10 @@ export interface Exception {
   resolution: string;
   created_at: string;
   resolved_at: string | null;
+  tank_no: string | null;
+  product_name: string | null;
+  date: string | null;
+  time: string | null;
 }
 
 export interface ShiftStatus {
