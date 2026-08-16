@@ -92,11 +92,11 @@ tank-farm-dip-control/
 ## First Run
 
 1. Extract the complete portable folder to its final writable location. A secured PRL shared folder may be used when all authorized users have read/write permission.
-2. Run `Tank Farm Dip Control.exe` as a normal Windows user. Do not use **Run as administrator**.
+2. Run `Tank Farm Dip Control v0.1.8.exe` as a normal Windows user. Do not use **Run as administrator**. The executable filename carries the application version (e.g. `Tank Farm Dip Control v0.1.8.exe`) so each build can be identified at a glance; rename it only if your deployment policy requires a fixed name.
 3. When no users exist, the application opens the one-time Administrator Setup screen. Create the initial local Administrator; no reusable or demo password is provided.
 4. Sign in and configure Tank, Product, Operator, Tank Status and tolerance master data before operational use. Initial reference roles, shifts, locations, product types and tank statuses are created safely on first start; sample operational data is optional and Administrator-controlled.
 
-All application-created files stay beside `Tank Farm Dip Control.exe`:
+All application-created files stay beside the executable (the versioned exe name does not affect storage — the Data/Backup/Logs folders are rooted in the executable's folder):
 
 | Folder | Contents |
 |---|---|
@@ -138,7 +138,7 @@ cargo build --release --manifest-path src-tauri/Cargo.toml
 npx tauri build --no-bundle
 ```
 
-The portable application executable is created at `src-tauri/target/release/app.exe`. Rename it to `Tank Farm Dip Control.exe` when preparing the delivery folder. A built application does not require Node.js, Rust, a server, or an internet connection at runtime.
+The portable application executable is created at `src-tauri/target/release/app.exe`. The CI workflow renames it to `Tank Farm Dip Control v<version>.exe` (version read from `package.json`) when preparing the delivery folder; do the same when building manually. A built application does not require Node.js, Rust, a server, or an internet connection at runtime.
 
 ## Requirements (End User)
 

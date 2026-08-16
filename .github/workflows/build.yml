@@ -56,11 +56,16 @@ jobs:
       - name: Prepare portable artifact
         shell: pwsh
         run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
           New-Item -ItemType Directory -Force -Path portable-ci | Out-Null
-          Copy-Item src-tauri/target/release/app.exe 'portable-ci/Tank Farm Dip Control.exe'
+          Copy-Item src-tauri/target/release/app.exe "portable-ci/Tank Farm Dip Control v$version.exe"
           if (Test-Path src-tauri/target/release/app_lib.dll) {
             Copy-Item src-tauri/target/release/app_lib.dll portable-ci/app_lib.dll
           }
+          if (Test-Path src-tauri/target/release/WebView2Loader.dll) {
+            Copy-Item src-tauri/target/release/WebView2Loader.dll portable-ci/WebView2Loader.dll
+          }
+          Get-ChildItem portable-ci | Select-Object Name
 
       - name: Upload portable Windows artifact
         uses: actions/upload-artifact@v4
