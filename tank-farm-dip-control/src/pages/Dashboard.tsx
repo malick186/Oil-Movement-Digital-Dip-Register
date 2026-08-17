@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store/appStore';
 import { useAuthStore } from '../store/authStore';
+import { useCountUp } from '../hooks/useCountUp';
 import {
   Cylinder,
   ClipboardList,
@@ -170,7 +171,7 @@ export default function Dashboard() {
       )}
 
       {/* Current Shift */}
-      <div className="glass-panel p-5">
+      <div className="glass-panel p-5 rise-1">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-8 h-8 rounded-lg bg-dragon-primary/10 flex items-center justify-center">
             <CalendarClock size={16} className="text-dragon-primary" />
@@ -191,7 +192,7 @@ export default function Dashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 rise-2">
         {quickActions.map((action) => (
           <button
             key={action.label}
@@ -208,7 +209,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3 rise-3 stat-stagger">
         {cards.map((card) => (
           <div key={card.label} className="glass-stat stat-3d">
             <div className="flex items-center gap-2.5 mb-2">
@@ -220,7 +221,7 @@ export default function Dashboard() {
               </span>
             </div>
             <div className={`text-2xl font-bold ${card.warn ? 'text-dragon-warning' : 'text-dragon-text'}`}>
-              {card.value}
+              <CountUpValue value={card.value} />
             </div>
             <div className="text-[11px] text-dragon-text-muted mt-0.5">{card.sub}</div>
           </div>
@@ -228,7 +229,7 @@ export default function Dashboard() {
       </div>
 
       {/* Attention Required table */}
-      <div className="glass-panel rounded-xl overflow-auto">
+      <div className="glass-panel rounded-xl overflow-auto rise-4">
         <div className="flex items-center gap-3 px-5 pt-4 pb-2">
           <div className="w-8 h-8 rounded-lg bg-dragon-warning/10 flex items-center justify-center">
             <AlertTriangle size={16} className="text-dragon-warning" />
@@ -347,4 +348,9 @@ function ShiftMetric({ label, value, mono }: { label: string; value: string; mon
       </div>
     </div>
   );
+}
+
+function CountUpValue({ value }: { value: number }) {
+  const animated = useCountUp(value);
+  return <>{animated}</>;
 }

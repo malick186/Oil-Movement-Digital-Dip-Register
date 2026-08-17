@@ -107,7 +107,7 @@ export default function ShiftClosingPage() {
 
       {message && <div className="notice-banner info">{message}</div>}
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-3 rise-1 stat-stagger">
         {shiftStatuses.map((status) => {
           const reasons = blockers(status);
           const blocked = reasons.length > 0;
@@ -226,7 +226,7 @@ export default function ShiftClosingPage() {
       </div>
 
       {/* Date-wise summary of the current month */}
-      <div className="glass-panel rounded-xl overflow-auto">
+      <div className="glass-panel rounded-xl overflow-auto rise-2">
         <div className="flex items-center gap-3 px-5 pt-4 pb-2">
           <div className="w-8 h-8 rounded-lg bg-dragon-teal/10 flex items-center justify-center">
             <CalendarDays size={16} className="text-dragon-teal" />
@@ -272,7 +272,7 @@ export default function ShiftClosingPage() {
         )}
       </div>
 
-      <div className="glass-panel rounded-xl overflow-auto flex-1">
+      <div className="glass-panel rounded-xl overflow-auto flex-1 rise-3">
         <table className="data-table w-full text-xs">
           <thead className="sticky top-0">
             <tr>

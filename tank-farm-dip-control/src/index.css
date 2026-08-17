@@ -72,6 +72,14 @@
   --dr-pink: #B43670;
 }
 
+/* ===== MOTION SYSTEM (premium, unified) ===== */
+:root {
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 350ms;
+}
+
 /* ===== BASE STYLES ===== */
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
@@ -136,38 +144,48 @@
 /* ===== GLASS-MORPHISM CARDS ===== */
 .glass-card {
   background: color-mix(in srgb, var(--dr-card) 75%, transparent);
+  background-image: linear-gradient(180deg, color-mix(in srgb, #ffffff 5%, transparent), transparent 34%);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid color-mix(in srgb, var(--dr-border) 60%, transparent);
   border-radius: var(--radius-xl);
-  transition: all 0.3s ease;
+  transition: transform var(--motion-base) var(--motion-ease),
+              box-shadow var(--motion-base) var(--motion-ease),
+              background-color var(--motion-base) var(--motion-ease),
+              border-color var(--motion-base) var(--motion-ease);
 }
 .glass-card:hover {
-  background: color-mix(in srgb, var(--dr-card) 85%, transparent);
-  border-color: color-mix(in srgb, var(--dr-primary) 30%, transparent);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background-color: color-mix(in srgb, var(--dr-card) 85%, transparent);
+  border-color: color-mix(in srgb, var(--dr-primary) 35%, transparent);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.32), 0 0 0 1px color-mix(in srgb, var(--dr-primary) 8%, transparent);
+  transform: translateY(-2px);
 }
 
 /* ===== GLASS STATS GRID ===== */
 .glass-stat {
   background: color-mix(in srgb, var(--dr-card) 70%, transparent);
+  background-image: linear-gradient(180deg, color-mix(in srgb, #ffffff 5%, transparent), transparent 34%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid color-mix(in srgb, var(--dr-border) 50%, transparent);
   border-radius: var(--radius-xl);
   padding: 1.25rem;
-  transition: all 0.25s ease;
+  transition: transform var(--motion-base) var(--motion-ease),
+              box-shadow var(--motion-base) var(--motion-ease),
+              background-color var(--motion-base) var(--motion-ease),
+              border-color var(--motion-base) var(--motion-ease);
 }
 .glass-stat:hover {
-  background: color-mix(in srgb, var(--dr-card) 82%, transparent);
-  border-color: color-mix(in srgb, var(--dr-primary) 25%, transparent);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  background-color: color-mix(in srgb, var(--dr-card) 82%, transparent);
+  border-color: color-mix(in srgb, var(--dr-primary) 30%, transparent);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28), 0 0 0 1px color-mix(in srgb, var(--dr-primary) 10%, transparent);
 }
 
 /* ===== GLASS PANEL ===== */
 .glass-panel {
   background: color-mix(in srgb, var(--dr-card) 65%, transparent);
+  background-image: linear-gradient(180deg, color-mix(in srgb, #ffffff 4%, transparent), transparent 28%);
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid color-mix(in srgb, var(--dr-border) 55%, transparent);
@@ -370,7 +388,9 @@
   line-height: 1.5;
   background: var(--dr-card);
   color: var(--dr-text);
-  transition: border-color 0.2s ease;
+  transition: border-color var(--motion-fast) var(--motion-ease),
+              box-shadow var(--motion-fast) var(--motion-ease),
+              background-color var(--motion-fast) var(--motion-ease);
 }
 .input-field::placeholder {
   color: var(--dr-text-muted);
@@ -378,7 +398,8 @@
 .input-field:focus {
   outline: none;
   border-color: var(--dr-primary);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dr-primary) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dr-primary) 18%, transparent),
+              0 2px 12px color-mix(in srgb, var(--dr-primary) 14%, transparent);
 }
 .input-field:disabled {
   background: color-mix(in srgb, var(--dr-accent) 50%, var(--dr-card));
@@ -399,19 +420,31 @@
   padding: 0.5rem 1rem;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform var(--motion-fast) var(--motion-ease),
+              box-shadow var(--motion-fast) var(--motion-ease),
+              filter var(--motion-fast) var(--motion-ease),
+              background-color var(--motion-fast) var(--motion-ease),
+              border-color var(--motion-fast) var(--motion-ease),
+              color var(--motion-fast) var(--motion-ease);
   white-space: nowrap;
+  will-change: transform;
 }
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.btn:not(:disabled):active {
+  transform: translateY(0) scale(0.97);
+}
 .btn-primary {
-  background: var(--dr-primary);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dr-primary) 88%, #ffffff), var(--dr-primary));
   color: white;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--dr-primary) 28%, transparent);
 }
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--dr-primary) 40%, transparent);
 }
 .btn-secondary {
   background: var(--dr-accent);
@@ -420,6 +453,8 @@
 }
 .btn-secondary:hover:not(:disabled) {
   background: var(--dr-border);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 .btn-danger {
   background: color-mix(in srgb, var(--dr-danger) 15%, transparent);
@@ -429,6 +464,8 @@
 .btn-danger:hover:not(:disabled) {
   background: var(--dr-danger);
   color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--dr-danger) 35%, transparent);
 }
 .btn-sm {
   padding: 0.25rem 0.625rem;
@@ -471,6 +508,7 @@
   font-size: 0.8125rem;
   color: var(--dr-text-dark);
   border-bottom: 1px solid color-mix(in srgb, var(--dr-border) 50%, transparent);
+  transition: background-color var(--motion-fast) ease;
 }
 .data-table tr:hover td {
   background: color-mix(in srgb, var(--dr-accent) 40%, transparent);
@@ -565,6 +603,132 @@
 }
 .page-exit {
   animation: slideOutLeft 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ===== PREMIUM MOTION LAYER ===== */
+
+/* Entrance choreography: sections rise in sequence (apply .rise-1..6 to page blocks) */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.rise-1, .rise-2, .rise-3, .rise-4, .rise-5, .rise-6 {
+  animation: rise 0.45s var(--motion-ease) both;
+}
+.rise-1 { animation-delay: 0.02s; }
+.rise-2 { animation-delay: 0.08s; }
+.rise-3 { animation-delay: 0.14s; }
+.rise-4 { animation-delay: 0.2s; }
+.rise-5 { animation-delay: 0.26s; }
+.rise-6 { animation-delay: 0.32s; }
+
+/* Stat cards: quick pop with a diagonal stagger */
+@keyframes statPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.stat-stagger > * {
+  animation: statPop 0.4s var(--motion-ease) both;
+}
+.stat-stagger > *:nth-child(2n) { animation-delay: 0.05s; }
+.stat-stagger > *:nth-child(3n) { animation-delay: 0.1s; }
+.stat-stagger > *:nth-child(4n) { animation-delay: 0.15s; }
+.stat-stagger > *:nth-child(5n) { animation-delay: 0.2s; }
+.stat-stagger > *:nth-child(6n) { animation-delay: 0.25s; }
+.stat-stagger > *:nth-child(7n) { animation-delay: 0.3s; }
+.stat-stagger > *:nth-child(8n) { animation-delay: 0.35s; }
+
+/* Dialogs & modals: backdrop fade + panel scale-rise */
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+[role="dialog"] {
+  animation: backdropIn 0.2s ease both;
+}
+[role="dialog"] .glass-panel {
+  animation: modalIn 0.35s var(--motion-ease) both;
+}
+
+/* Premium loading: shimmer bar under a glowing spinner */
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+.loading-spinner {
+  border-color: color-mix(in srgb, var(--dr-primary) 22%, var(--dr-border));
+  border-top-color: var(--dr-primary);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--dr-primary) 22%, transparent);
+}
+.loading-state::after {
+  content: '';
+  width: 180px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--dr-accent) 55%, transparent) 25%,
+    color-mix(in srgb, var(--dr-primary) 30%, var(--dr-accent)) 50%,
+    color-mix(in srgb, var(--dr-accent) 55%, transparent) 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+/* Skeleton building blocks (opt-in: <div className="skeleton skeleton-line" />) */
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--dr-accent) 55%, transparent) 25%,
+    color-mix(in srgb, var(--dr-primary) 26%, var(--dr-accent)) 50%,
+    color-mix(in srgb, var(--dr-accent) 55%, transparent) 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.skeleton-line { height: 10px; }
+.skeleton-card { height: 88px; border-radius: var(--radius-xl); }
+
+/* Ambient depth: soft drifting corner glow behind the content area */
+main::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(52% 42% at 12% 0%, color-mix(in srgb, var(--dr-primary) 7%, transparent), transparent 62%),
+    radial-gradient(46% 38% at 96% 100%, color-mix(in srgb, var(--dr-secondary) 7%, transparent), transparent 62%),
+    radial-gradient(34% 28% at 78% 6%, color-mix(in srgb, var(--dr-teal) 5%, transparent), transparent 60%);
+  animation: ambientDrift 18s ease-in-out infinite alternate;
+}
+main > div {
+  position: relative;
+  z-index: 1;
+}
+@keyframes ambientDrift {
+  from { transform: translateY(-1%) scale(1); }
+  to { transform: translateY(1%) scale(1.03); }
+}
+
+/* Sidebar brand: gentle presence pulse on the logo panel */
+.prl-brand-panel {
+  transition: transform var(--motion-base) var(--motion-ease),
+              box-shadow var(--motion-base) var(--motion-ease);
+}
+.prl-brand-panel:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 66, 40, 0.2);
+}
+
+/* Accessibility: honour reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ===== PRINT STYLES ===== */
