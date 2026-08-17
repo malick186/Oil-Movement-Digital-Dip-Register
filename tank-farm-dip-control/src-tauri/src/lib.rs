@@ -100,6 +100,7 @@ pub fn run() {
             commands::shift_closing::get_shift_status,
             commands::shift_closing::close_shift,
             commands::shift_closing::get_shift_closing_history,
+            commands::shift_closing::get_monthly_shift_summary,
             commands::audit::get_audit_logs,
             commands::backup::create_backup,
             commands::backup::restore_backup,

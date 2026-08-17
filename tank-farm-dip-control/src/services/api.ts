@@ -16,6 +16,7 @@ import type {
   AuditLog,
   ShiftClosing,
   ShiftStatus,
+  MonthlyShiftSummary,
   ToleranceSetting,
   Exception,
   BackupInfo,
@@ -286,6 +287,10 @@ export async function closeShift(shiftId: number, remarks?: string): Promise<Shi
 
 export async function getShiftClosingHistory(): Promise<ShiftClosing[]> {
   return invoke('get_shift_closing_history');
+}
+
+export async function getMonthlyShiftSummary(): Promise<MonthlyShiftSummary[]> {
+  return invoke('get_monthly_shift_summary');
 }
 
 // ── Audit ──

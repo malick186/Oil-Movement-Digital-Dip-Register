@@ -242,6 +242,17 @@ export interface ShiftStatus {
   is_closed: boolean;
 }
 
+export interface MonthlyShiftSummary {
+  date: string;
+  shift_id: number;
+  shift_name: string;
+  total_dips: number;
+  approved: number;
+  pending_review: number;
+  exceptions: number;
+  is_closed: boolean;
+}
+
 export interface BackupInfo {
   filename: string;
   created_at: string;

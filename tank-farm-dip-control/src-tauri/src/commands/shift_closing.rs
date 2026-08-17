@@ -1,7 +1,7 @@
 use rusqlite::params;
 use std::sync::Mutex;
 
-use crate::models::{ShiftClosing, ShiftStatus, UserSession};
+use crate::models::{MonthlyShiftSummary, ShiftClosing, ShiftStatus, UserSession};
 use crate::util::{audit_log, require_roles};
 
 fn today_string() -> String {
@@ -271,6 +271,57 @@ pub fn get_shift_closing_history(
                 total_exceptions: row.get(7)?,
                 pending_items: row.get(8)?,
                 status: row.get(9)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
+/// Date-wise Shift Closing summary for the current month: one row per
+/// (date, shift) that has Dip Records, with totals, approvals, pending items,
+/// open exceptions and closing status.
+#[tauri::command]
+pub fn get_monthly_shift_summary(
+    db: tauri::State<'_, Mutex<rusqlite::Connection>>,
+    current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
+) -> Result<Vec<MonthlyShiftSummary>, String> {
+    let _session = require_roles(&current_session, &["Shift In-Charge", "Administrator"])?;
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    let month = chrono::Local::now().format("%Y-%m").to_string();
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT d.date, d.shift_id, COALESCE(s.name,''), COUNT(*),
+                    SUM(CASE WHEN d.record_status='approved' AND d.approval_status='approved' THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN d.record_status NOT IN ('approved','rejected','superseded') THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN EXISTS (
+                        SELECT 1 FROM exceptions e WHERE e.dip_record_id=d.id AND e.status='open'
+                    ) THEN 1 ELSE 0 END),
+                    EXISTS (
+                        SELECT 1 FROM shift_closings sc
+                        WHERE sc.date=d.date AND sc.shift_id=d.shift_id AND sc.status='closed'
+                    )
+             FROM dip_records d
+             LEFT JOIN shifts s ON d.shift_id=s.id
+             WHERE d.date LIKE ?1 || '-%'
+             GROUP BY d.date, d.shift_id
+             ORDER BY d.date, d.shift_id",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![month], |row| {
+            Ok(MonthlyShiftSummary {
+                date: row.get(0)?,
+                shift_id: row.get(1)?,
+                shift_name: row.get(2)?,
+                total_dips: row.get(3)?,
+                approved: row.get(4)?,
+                pending_review: row.get(5)?,
+                exceptions: row.get(6)?,
+                is_closed: row.get(7)?,
             })
         })
         .map_err(|e| e.to_string())?

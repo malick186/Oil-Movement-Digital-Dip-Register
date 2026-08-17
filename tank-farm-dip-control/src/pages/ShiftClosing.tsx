@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import * as api from '../services/api';
-import type { ShiftClosing, ShiftStatus, TankGaugingStatus } from '../types';
-import { AlertTriangle, CalendarCheck, CheckCircle2, ChevronDown, ChevronRight, Lock, ListChecks } from 'lucide-react';
+import type { MonthlyShiftSummary, ShiftClosing, ShiftStatus, TankGaugingStatus } from '../types';
+import { AlertTriangle, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Lock, ListChecks } from 'lucide-react';
+
+function monthLabel(): string {
+  return new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
 
 export default function ShiftClosingPage() {
   const [shiftStatuses, setShiftStatuses] = useState<ShiftStatus[]>([]);
   const [history, setHistory] = useState<ShiftClosing[]>([]);
+  const [monthlySummary, setMonthlySummary] = useState<MonthlyShiftSummary[]>([]);
   const [closingShiftId, setClosingShiftId] = useState<number | null>(null);
   const [shiftRemarks, setShiftRemarks] = useState<Record<number, string>>({});
   const [gauging, setGauging] = useState<Record<number, TankGaugingStatus[]>>({});
@@ -16,9 +21,14 @@ export default function ShiftClosingPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [statuses, closings] = await Promise.all([api.getShiftStatus(), api.getShiftClosingHistory()]);
+      const [statuses, closings, summary] = await Promise.all([
+        api.getShiftStatus(),
+        api.getShiftClosingHistory(),
+        api.getMonthlyShiftSummary(),
+      ]);
       setShiftStatuses(statuses);
       setHistory(closings);
+      setMonthlySummary(summary);
 
       // Preload the per-tank gauging review for every open shift.
       const open = statuses.filter((s) => !s.is_closed);
@@ -213,6 +223,53 @@ export default function ShiftClosingPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* Date-wise summary of the current month */}
+      <div className="glass-panel rounded-xl overflow-auto">
+        <div className="flex items-center gap-3 px-5 pt-4 pb-2">
+          <div className="w-8 h-8 rounded-lg bg-dragon-teal/10 flex items-center justify-center">
+            <CalendarDays size={16} className="text-dragon-teal" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-dragon-text">Monthly Summary — {monthLabel()}</h3>
+            <p className="text-xs text-dragon-text-muted mt-0.5">Date-wise Shift Closing status for the current month</p>
+          </div>
+        </div>
+        {monthlySummary.length === 0 ? (
+          <p className="px-5 pb-4 text-xs text-dragon-text-muted">No Dip Records recorded this month yet.</p>
+        ) : (
+          <table className="data-table w-full text-xs">
+            <thead className="sticky top-0">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Date</th>
+                <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Shift</th>
+                <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Total Dips</th>
+                <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Approved</th>
+                <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Pending Review</th>
+                <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Open Exceptions</th>
+                <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Closing Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthlySummary.map((row) => (
+                <tr key={`${row.date}-${row.shift_id}`}>
+                  <td className="px-3 py-2 text-dragon-text">{row.date}</td>
+                  <td className="px-3 py-2 text-dragon-text-secondary">{row.shift_name}</td>
+                  <td className="px-3 py-2 text-right font-mono">{row.total_dips}</td>
+                  <td className="px-3 py-2 text-right font-mono text-dragon-success">{row.approved}</td>
+                  <td className="px-3 py-2 text-right font-mono">{row.pending_review}</td>
+                  <td className="px-3 py-2 text-right font-mono">{row.exceptions}</td>
+                  <td className="px-3 py-2">
+                    <span className={row.is_closed ? 'badge badge-success' : 'badge badge-warning'}>
+                      {row.is_closed ? 'Closed' : 'Open'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="glass-panel rounded-xl overflow-auto flex-1">

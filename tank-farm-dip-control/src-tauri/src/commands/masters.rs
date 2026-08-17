@@ -18,6 +18,13 @@ fn require_text(value: &str, label: &str) -> Result<(), String> {
     }
 }
 
+/// Trims the value and returns None when blank, so optional master fields can be
+/// stored as NULL (e.g. the Operator Employee ID).
+fn optional_text(value: &str) -> Option<&str> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() { None } else { Some(trimmed) }
+}
+
 fn require_optional_text(value: &Option<String>, label: &str) -> Result<(), String> {
     match value.as_deref().map(str::trim) {
         Some(v) if !v.is_empty() => Ok(()),
@@ -109,7 +116,6 @@ pub fn create_tank(
     let session = require_roles(&current_session, ADMIN_ONLY)?;
     require_text(&data.tank_no, "Tank No.")?;
     require_optional_text(&data.location, "Location")?;
-    require_optional_text(&data.tank_farm, "Tank Farm / Terminal")?;
     require_optional_text(&data.reference_point, "Reference Point")?;
 
     let tank_no = data.tank_no.trim().to_string();
@@ -172,7 +178,6 @@ pub fn update_tank(
 
     if let Some(ref value) = data.tank_no { require_text(value, "Tank No.")?; }
     if let Some(ref value) = data.location { require_text(value, "Location")?; }
-    if let Some(ref value) = data.tank_farm { require_text(value, "Tank Farm / Terminal")?; }
     if let Some(ref value) = data.reference_point { require_text(value, "Reference Point")?; }
 
     conn.execute(
@@ -331,7 +336,7 @@ fn query_operator(row: &rusqlite::Row) -> rusqlite::Result<Operator> {
 
 fn get_operator_raw(conn: &rusqlite::Connection, id: i64) -> Result<Operator, String> {
     conn.query_row(
-        "SELECT id,employee_id,name,designation,location,shift_group,active,remarks FROM operators WHERE id=?1",
+        "SELECT id,COALESCE(employee_id,''),name,designation,location,shift_group,active,remarks FROM operators WHERE id=?1",
         params![id],
         query_operator,
     )
@@ -346,7 +351,7 @@ pub fn list_operators(
     let _session = require_roles(&current_session, OPERATIONAL_ROLES)?;
     let conn = db.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id,employee_id,name,designation,location,shift_group,active,remarks FROM operators ORDER BY name")
+        .prepare("SELECT id,COALESCE(employee_id,''),name,designation,location,shift_group,active,remarks FROM operators ORDER BY name")
         .map_err(|e| e.to_string())?;
     let rows = stmt.query_map([], query_operator).map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?;
@@ -371,12 +376,12 @@ pub fn create_operator(
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Operator, String> {
     let session = require_roles(&current_session, ADMIN_ONLY)?;
-    require_text(&data.employee_id, "Employee ID")?;
     require_text(&data.name, "Operator Name")?;
+    let employee_id = optional_text(&data.employee_id);
     let conn = db.lock().map_err(|e| e.to_string())?;
     conn.execute(
         "INSERT INTO operators (employee_id,name,designation,location,shift_group,active,remarks) VALUES (?1,?2,?3,?4,?5,?6,?7)",
-        params![data.employee_id, data.name, data.designation, data.location, data.shift_group, data.active.unwrap_or(1), data.remarks],
+        params![employee_id, data.name, data.designation, data.location, data.shift_group, data.active.unwrap_or(1), data.remarks],
     )
     .map_err(|e| format!("Failed to create Operator: {}", e))?;
     let id = conn.last_insert_rowid();
@@ -393,13 +398,13 @@ pub fn update_operator(
     current_session: tauri::State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<Operator, String> {
     let session = require_roles(&current_session, ADMIN_ONLY)?;
-    require_text(&data.employee_id, "Employee ID")?;
     require_text(&data.name, "Operator Name")?;
+    let employee_id = optional_text(&data.employee_id);
     let conn = db.lock().map_err(|e| e.to_string())?;
     let old = get_operator_raw(&conn, id)?;
     conn.execute(
         "UPDATE operators SET employee_id=?1,name=?2,designation=?3,location=?4,shift_group=?5,active=COALESCE(?6,active),remarks=?7 WHERE id=?8",
-        params![data.employee_id, data.name, data.designation, data.location, data.shift_group, data.active, data.remarks, id],
+        params![employee_id, data.name, data.designation, data.location, data.shift_group, data.active, data.remarks, id],
     )
     .map_err(|e| format!("Failed to update Operator: {}", e))?;
     let updated = get_operator_raw(&conn, id)?;

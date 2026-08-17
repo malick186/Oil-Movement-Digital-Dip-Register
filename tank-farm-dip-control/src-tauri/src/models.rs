@@ -337,6 +337,18 @@ pub struct ShiftStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonthlyShiftSummary {
+    pub date: String,
+    pub shift_id: i64,
+    pub shift_name: String,
+    pub total_dips: i64,
+    pub approved: i64,
+    pub pending_review: i64,
+    pub exceptions: i64,
+    pub is_closed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToleranceSetting {
     pub id: i64,
     pub tank_id: Option<i64>,

@@ -72,7 +72,7 @@ export default function TankDetail({ tankId, onBack }: Props) {
           &larr; Back to Tank Status
         </button>
         <h2 className="text-xl font-bold text-dragon-text">
-          {tank.tank_no} - {tank.current_product || tank.normal_product || 'Unassigned'}
+          {tank.tank_no} - {tank.current_product || 'Unassigned'}
         </h2>
       </div>
 
@@ -115,18 +115,15 @@ export default function TankDetail({ tankId, onBack }: Props) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-xs">
               <Field label="Tank No." value={tank.tank_no} />
               <Field label="Location" value={tank.location} />
-              <Field label="Tank Farm" value={tank.tank_farm} />
-              <Field label="Product" value={tank.current_product || tank.normal_product} />
+              <Field label="Service" value={tank.current_product} />
               <Field label="Reference Point" value={tank.reference_point} />
               <Field label="Tank Type" value={tank.tank_type} />
               <Field label="Roof Type" value={tank.roof_type} />
               <Field label="Safe Fill Height" value={tank.safe_fill_height?.toString()} />
-              <Field label="Min Operating Level" value={tank.min_operating_level?.toString()} />
               <Field label="Radar Available" value={tank.radar_available ? 'Yes' : 'No'} />
               <Field label="Auto Dip Available" value={tank.auto_dip_available ? 'Yes' : 'No'} />
               <Field label="Water Dip Applicable" value={tank.water_dip_applicable ? 'Yes' : 'No'} />
               <Field label="Sludge Dip Applicable" value={tank.sludge_dip_applicable ? 'Yes' : 'No'} />
-              <Field label="Working Capacity" value={tank.working_capacity?.toString()} />
             </div>
           </div>
 

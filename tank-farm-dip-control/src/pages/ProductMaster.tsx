@@ -56,13 +56,13 @@ export default function ProductMaster() {
 
   const handleEdit = (p: Product) => {
     setEditingId(p.id);
-    reset({ name: p.name, code: p.code, category: p.category, active: !!p.active, remarks: p.remarks });
+    reset({ name: p.name, category: p.category, active: !!p.active, remarks: p.remarks });
     setShowForm(true);
   };
 
   const handleCreate = () => {
     setEditingId(null);
-    reset({ name: '', code: '', category: '', active: true, remarks: '' });
+    reset({ name: '', category: '', active: true, remarks: '' });
     setShowForm(true);
   };
 
@@ -88,13 +88,8 @@ export default function ProductMaster() {
                 {errors.name && <p className="text-dragon-danger text-xs mt-0.5">{errors.name.message}</p>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Code <span className="text-dragon-danger">*</span></label>
-                <input {...register('code')} className="input-field" />
-                {errors.code && <p className="text-dragon-danger text-xs mt-0.5">{errors.code.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Category</label>
-                <input {...register('category')} className="input-field" />
+                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Product Name</label>
+                <input {...register('category')} className="input-field" placeholder="e.g. Crude, HSFO, HSD" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Remarks</label>
@@ -118,23 +113,21 @@ export default function ProductMaster() {
         <table className="data-table w-full text-xs">
           <thead className="sticky top-0">
             <tr>
-              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Code</th>
               <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Name</th>
-              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Category</th>
+              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Product Name</th>
               <th className="text-center px-2 py-1.5 font-medium text-dragon-text-secondary">Active</th>
               <th className="text-center px-2 py-1.5 font-medium text-dragon-text-secondary">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="text-center py-8"><div className="loading-state"><div className="loading-spinner" /><span>Loading...</span></div></td></tr>
+              <tr><td colSpan={4} className="text-center py-8"><div className="loading-state"><div className="loading-spinner" /><span>Loading...</span></div></td></tr>
             ) : products.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-8"><div className="empty-state"><span className="empty-state-text">No products found</span></div></td></tr>
+              <tr><td colSpan={4} className="text-center py-8"><div className="empty-state"><span className="empty-state-text">No products found</span></div></td></tr>
             ) : (
               products.map((p) => (
                 <tr key={p.id} className="border-b border-dragon-border hover:bg-dragon-bg">
-                  <td className="px-2 py-1 font-mono font-medium text-dragon-text">{p.code}</td>
-                  <td className="px-2 py-1 text-dragon-text">{p.name}</td>
+                  <td className="px-2 py-1 font-medium text-dragon-text">{p.name}</td>
                   <td className="px-2 py-1 text-dragon-text-secondary">{p.category || '--'}</td>
                   <td className="px-2 py-1 text-center">{p.active ? <span className="badge badge-success">Yes</span> : <span className="badge badge-danger">No</span>}</td>
                   <td className="px-2 py-1 text-center">

@@ -32,17 +32,11 @@ export type DipEntryFormData = z.infer<typeof dipEntrySchema>;
 export const tankSchema = z.object({
   tank_no: z.string().min(1, 'Tank number is required'),
   location: z.string().min(1, 'Location is required'),
-  tank_farm: z.string().min(1, 'Tank farm is required'),
-  normal_product: z.string().optional(),
   current_product: z.string().optional(),
   reference_point: z.string().min(1, 'Reference point is required'),
   tank_type: z.string().optional(),
   roof_type: z.string().optional(),
   safe_fill_height: z.number().nullable().optional(),
-  min_operating_level: z.number().nullable().optional(),
-  ref_gauge_height: z.number().nullable().optional(),
-  datum_height: z.number().nullable().optional(),
-  working_capacity: z.number().nullable().optional(),
   radar_available: z.boolean(),
   auto_dip_available: z.boolean(),
   water_dip_applicable: z.boolean(),
@@ -55,7 +49,6 @@ export type TankFormData = z.infer<typeof tankSchema>;
 
 export const productSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
-  code: z.string().min(1, 'Product code is required'),
   category: z.string().optional(),
   active: z.boolean(),
   remarks: z.string().optional(),
@@ -64,7 +57,7 @@ export const productSchema = z.object({
 export type ProductFormData = z.infer<typeof productSchema>;
 
 export const operatorSchema = z.object({
-  employee_id: z.string().min(1, 'Employee ID is required'),
+  employee_id: z.string().optional(),
   name: z.string().min(1, 'Name is required'),
   designation: z.string().optional(),
   location: z.string().optional(),

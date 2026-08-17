@@ -6,7 +6,7 @@ import type { DipRecordWithRelations, Operator, Product, ShiftStatus, Tank, Tank
 import * as api from '../services/api';
 import { useToastStore } from '../store/toastStore';
 import { useAppStore } from '../store/appStore';
-import { AlertTriangle, CheckCircle2, FilePenLine, RotateCcw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FilePenLine, History, RotateCcw } from 'lucide-react';
 
 function localDate() {
   const now = new Date();
@@ -42,6 +42,8 @@ export default function NewDip() {
   const [recheckTarget, setRecheckTarget] = useState<DipRecordWithRelations | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingRecordNumber, setEditingRecordNumber] = useState<string | null>(null);
+  const [previousReadings, setPreviousReadings] = useState<DipRecordWithRelations[]>([]);
+  const [loadingPrevious, setLoadingPrevious] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -68,7 +70,6 @@ export default function NewDip() {
   });
 
   const selectedTankId = watch('tank_id');
-  const selectedProductId = watch('product_id');
   const selectedStatusId = watch('tank_status_id');
   const gross = watch('gross_dip_mm');
   const auto = watch('auto_dip_mm');
@@ -79,6 +80,13 @@ export default function NewDip() {
   const grossAuto = diff(gross, auto);
   const grossRadar = diff(gross, radar);
   const autoRadar = diff(auto, radar);
+
+  // Product Type is read from Tank Master Data (Current Service) — not typed here.
+  const desiredProduct = (selectedTank?.current_product || selectedTank?.normal_product || '').trim();
+  const matchedProduct = products.find(
+    (p) => p.name.trim().toLowerCase() === desiredProduct.toLowerCase() ||
+          (p.code?.trim().toLowerCase() ?? '') === desiredProduct.toLowerCase(),
+  );
 
   const loadRechecks = async () => {
     try {
@@ -146,15 +154,30 @@ export default function NewDip() {
     })();
   }, [setValue, editDipRecordId, clearEditDip]);
 
+  // Keep product_id in sync with the Tank Master's Current Service.
   useEffect(() => {
     if (!selectedTank || recheckTarget) return;
     const desired = (selectedTank.current_product || selectedTank.normal_product || '').trim().toLowerCase();
-    if (!desired) return;
-    const match = products.find((p) => p.name.trim().toLowerCase() === desired || p.code.trim().toLowerCase() === desired);
-    if (match && Number(selectedProductId) !== match.id) {
-      setValue('product_id', match.id, { shouldValidate: true });
+    const match = desired
+      ? products.find((p) => p.name.trim().toLowerCase() === desired || (p.code?.trim().toLowerCase() ?? '') === desired)
+      : undefined;
+    setValue('product_id', match ? match.id : 0);
+  }, [selectedTank, products, recheckTarget, setValue]);
+
+  // Previous recordings for the selected Tank (shown at the bottom of the page).
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedTankId) {
+      setPreviousReadings([]);
+      return;
     }
-  }, [selectedTank, selectedProductId, products, recheckTarget, setValue]);
+    setLoadingPrevious(true);
+    api.listDipRecords({ tank_id: Number(selectedTankId), limit: 10, offset: 0 })
+      .then((rows) => { if (!cancelled) setPreviousReadings(rows); })
+      .catch(() => { if (!cancelled) setPreviousReadings([]); })
+      .finally(() => { if (!cancelled) setLoadingPrevious(false); });
+    return () => { cancelled = true; };
+  }, [selectedTankId]);
 
   const startRecheck = (record: DipRecordWithRelations) => {
     setRecheckTarget(record);
@@ -359,10 +382,16 @@ export default function NewDip() {
                 </select>
               </Field>
               <Field label="Product Type" required error={errors.product_id?.message}>
-                <select {...register('product_id', { valueAsNumber: true })} className="input-field" disabled={Boolean(recheckTarget)}>
-                  <option value="">Select product...</option>
-                  {products.map((p) => <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>)}
-                </select>
+                <div className={`input-field min-h-[38px] flex items-center ${
+                  matchedProduct ? 'text-dragon-text' :
+                  desiredProduct ? 'text-dragon-danger' : 'text-dragon-text-muted'
+                }`}>
+                  {matchedProduct
+                    ? `${matchedProduct.name}${matchedProduct.code ? ` (${matchedProduct.code})` : ''}`
+                    : desiredProduct
+                      ? `No matching Product in Master for "${desiredProduct}"`
+                      : 'Set Current Service in Tank Master'}
+                </div>
               </Field>
               <Field label="Reference Point" required>
                 <div className={`input-field min-h-[38px] flex items-center ${selectedTank?.reference_point ? 'text-dragon-text' : 'text-dragon-danger'}`}>
@@ -391,9 +420,9 @@ export default function NewDip() {
                 <input type="number" step="0.1" {...register('sludge_dip_mm', { valueAsNumber: true })} className="input-field" />
               </Field>
               <Field label="Temperature" required error={errors.temperature?.message}>
-                <div className="flex gap-1">
-                  <input type="number" step="0.1" {...register('temperature', { valueAsNumber: true })} className="input-field flex-1" />
-                  <select {...register('temperature_unit')} className="input-field w-20">
+                <div className="flex gap-1.5">
+                  <input type="number" step="0.1" {...register('temperature', { valueAsNumber: true })} className="input-field min-w-0 flex-[3]" />
+                  <select {...register('temperature_unit')} className="input-field w-16 flex-none px-1.5 text-center">
                     <option value="C">°C</option>
                     <option value="F">°F</option>
                   </select>
@@ -416,7 +445,7 @@ export default function NewDip() {
               <Field label="Dip Performed By" required error={errors.operator_id?.message}>
                 <select {...register('operator_id', { valueAsNumber: true })} className="input-field">
                   <option value="">Select operator...</option>
-                  {operators.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.employee_id})</option>)}
+                  {operators.map((o) => <option key={o.id} value={o.id}>{o.name}{o.employee_id ? ` (${o.employee_id})` : ''}</option>)}
                 </select>
               </Field>
             </div>
@@ -471,8 +500,75 @@ export default function NewDip() {
           </div>
         </aside>
       </form>
+
+      {/* Previous recordings for the selected Tank */}
+      {selectedTankId ? (
+        <div className="glass-panel rounded-xl overflow-auto">
+          <div className="flex items-center gap-3 px-5 pt-4 pb-2">
+            <div className="w-8 h-8 rounded-lg bg-dragon-primary/10 flex items-center justify-center">
+              <History size={15} className="text-dragon-primary" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-dragon-text">
+                Previous Recordings — {selectedTank?.tank_no}
+              </h3>
+              <p className="text-xs text-dragon-text-muted mt-0.5">Latest 10 Dip Records for this Tank</p>
+            </div>
+          </div>
+          {loadingPrevious ? (
+            <div className="loading-state py-6"><div className="loading-spinner" /></div>
+          ) : previousReadings.length === 0 ? (
+            <p className="px-5 pb-5 text-xs text-dragon-text-muted">No previous recordings for this Tank.</p>
+          ) : (
+            <table className="data-table w-full text-xs">
+              <thead>
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Date</th>
+                  <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Time</th>
+                  <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Gross Dip</th>
+                  <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Auto Dip</th>
+                  <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Radar Dip</th>
+                  <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Water</th>
+                  <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Sludge</th>
+                  <th className="text-right px-3 py-2 font-medium text-dragon-text-secondary">Temp</th>
+                  <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Status</th>
+                  <th className="text-left px-3 py-2 font-medium text-dragon-text-secondary">Performed By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previousReadings.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-3 py-2 text-dragon-text">{r.date}</td>
+                    <td className="px-3 py-2 text-dragon-text-secondary">{r.time}</td>
+                    <td className="px-3 py-2 text-right font-mono text-dragon-text">{fmtNum(r.gross_dip_mm)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">{fmtNum(r.auto_dip_mm)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">{fmtNum(r.radar_dip_mm)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">{fmtNum(r.water_dip_mm)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">{fmtNum(r.sludge_dip_mm)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-dragon-text-secondary">
+                      {r.temperature != null ? `${r.temperature}${r.temperature_unit ?? ''}` : '--'}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                        r.record_status === 'approved' ? 'bg-dragon-success/20 text-dragon-success' :
+                        r.record_status === 'rejected' ? 'bg-dragon-danger/20 text-dragon-danger' :
+                        'bg-dragon-warning/20 text-dragon-warning'
+                      }`}>{r.record_status}</span>
+                    </td>
+                    <td className="px-3 py-2 text-dragon-text-secondary">{r.operator_name || '--'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function fmtNum(value: number | null | undefined): string {
+  return value == null ? '--' : value.toFixed(1);
 }
 
 function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {

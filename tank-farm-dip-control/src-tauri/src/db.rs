@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::storage::{PortablePaths, DB_FILENAME};
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 fn legacy_user_local_db_path() -> Option<std::path::PathBuf> {
     dirs::data_local_dir().map(|base| {
@@ -115,11 +115,53 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         )
         .unwrap_or(0);
 
-    if current_version < SCHEMA_VERSION {
+    if current_version < 1 {
         apply_migration_v1(conn)?;
     }
+    if current_version < 2 {
+        apply_migration_v2(conn)?;
+    }
+
+    conn.execute(
+        "INSERT OR REPLACE INTO application_settings (key, value) VALUES ('schema_version', ?1)",
+        [SCHEMA_VERSION.to_string()],
+    )
+    .map_err(|e| format!("Failed to set schema version: {}", e))?;
 
     Ok(())
+}
+
+/// v2: Operator Employee ID becomes optional, and the 'Afternoon' Shift is
+/// deactivated because the company operates only two shifts (Morning / Night).
+/// Existing operator rows keep their Employee IDs; dip history remains intact
+/// because deactivated shifts are only hidden from entry/selection lists.
+fn apply_migration_v2(conn: &Connection) -> Result<(), String> {
+    conn.execute_batch("PRAGMA foreign_keys=OFF;")
+        .map_err(|e| format!("Migration V2 error: {}", e))?;
+    let result = conn.execute_batch(
+        "BEGIN;
+         ALTER TABLE operators RENAME TO operators_old;
+         CREATE TABLE operators (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             employee_id TEXT UNIQUE,
+             name TEXT NOT NULL,
+             designation TEXT,
+             location TEXT,
+             shift_group TEXT,
+             active INTEGER NOT NULL DEFAULT 1,
+             remarks TEXT
+         );
+         INSERT INTO operators (id, employee_id, name, designation, location, shift_group, active, remarks)
+             SELECT id, NULLIF(TRIM(employee_id), ''), name, designation, location, shift_group, active, remarks
+             FROM operators_old;
+         DROP TABLE operators_old;
+         CREATE INDEX IF NOT EXISTS idx_operators_employee_id ON operators(employee_id);
+         UPDATE shifts SET active=0 WHERE lower(TRIM(name))='afternoon';
+         COMMIT;",
+    );
+    conn.execute_batch("PRAGMA foreign_keys=ON;")
+        .map_err(|e| format!("Migration V2 error: {}", e))?;
+    result.map_err(|e| format!("Migration V2 error: {}", e))
 }
 
 fn apply_migration_v1(conn: &Connection) -> Result<(), String> {
@@ -350,12 +392,6 @@ fn apply_migration_v1(conn: &Connection) -> Result<(), String> {
         ",
     )
     .map_err(|e| format!("Migration V1 error: {}", e))?;
-
-    conn.execute(
-        "INSERT OR REPLACE INTO application_settings (key, value) VALUES ('schema_version', ?1)",
-        [SCHEMA_VERSION.to_string()],
-    )
-    .map_err(|e| format!("Failed to set schema version: {}", e))?;
 
     Ok(())
 }

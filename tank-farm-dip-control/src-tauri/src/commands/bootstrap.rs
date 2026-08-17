@@ -58,7 +58,6 @@ pub fn bootstrap_admin(
     conn.execute_batch(
         "INSERT OR IGNORE INTO shifts (name, start_time, end_time, active) VALUES
          ('Morning', '06:00', '14:00', 1),
-         ('Afternoon', '14:00', '22:00', 1),
          ('Night', '22:00', '06:00', 1);
 
          INSERT OR IGNORE INTO products (name, code, category, active) VALUES

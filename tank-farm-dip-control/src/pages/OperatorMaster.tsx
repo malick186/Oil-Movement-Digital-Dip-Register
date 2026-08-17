@@ -63,8 +63,8 @@ export default function OperatorMaster() {
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Employee ID <span className="text-dragon-danger">*</span></label>
-                <input {...register('employee_id')} className="input-field" />
+                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Employee ID</label>
+                <input {...register('employee_id')} className="input-field" placeholder="Optional" />
                 {errors.employee_id && <p className="text-dragon-danger text-xs mt-0.5">{errors.employee_id.message}</p>}
               </div>
               <div>
@@ -123,7 +123,7 @@ export default function OperatorMaster() {
             ) : (
               operators.map((o) => (
                 <tr key={o.id} className="border-b border-dragon-border hover:bg-dragon-bg">
-                  <td className="px-2 py-1 font-mono text-dragon-text">{o.employee_id}</td>
+                  <td className="px-2 py-1 font-mono text-dragon-text">{o.employee_id || '--'}</td>
                   <td className="px-2 py-1 font-medium text-dragon-text">{o.name}</td>
                   <td className="px-2 py-1 text-dragon-text-secondary">{o.designation || '--'}</td>
                   <td className="px-2 py-1 text-dragon-text-secondary">{o.location || '--'}</td>

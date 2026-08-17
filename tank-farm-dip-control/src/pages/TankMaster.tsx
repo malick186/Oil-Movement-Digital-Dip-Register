@@ -67,17 +67,11 @@ export default function TankMaster() {
     reset({
       tank_no: tank.tank_no,
       location: tank.location,
-      tank_farm: tank.tank_farm,
-      normal_product: tank.normal_product,
       current_product: tank.current_product,
       reference_point: tank.reference_point,
       tank_type: tank.tank_type,
       roof_type: tank.roof_type,
       safe_fill_height: tank.safe_fill_height,
-      min_operating_level: tank.min_operating_level,
-      ref_gauge_height: tank.ref_gauge_height,
-      datum_height: tank.datum_height,
-      working_capacity: tank.working_capacity,
       radar_available: !!tank.radar_available,
       auto_dip_available: !!tank.auto_dip_available,
       water_dip_applicable: !!tank.water_dip_applicable,
@@ -132,14 +126,8 @@ export default function TankMaster() {
               <Field label="Location" required error={errors.location?.message}>
                 <input {...register('location')} className="input-field" />
               </Field>
-              <Field label="Tank Farm" required error={errors.tank_farm?.message}>
-                <input {...register('tank_farm')} className="input-field" />
-              </Field>
-              <Field label="Normal Product" error={errors.normal_product?.message}>
-                <input {...register('normal_product')} className="input-field" />
-              </Field>
-              <Field label="Current Product" error={errors.current_product?.message}>
-                <input {...register('current_product')} className="input-field" />
+              <Field label="Current Service" error={errors.current_product?.message}>
+                <input {...register('current_product')} className="input-field" placeholder="e.g. Crude, HSFO, HSD" />
               </Field>
               <Field label="Reference Point" error={errors.reference_point?.message}>
                 <input {...register('reference_point')} className="input-field" />
@@ -152,18 +140,6 @@ export default function TankMaster() {
               </Field>
               <Field label="Safe Fill Height" error={errors.safe_fill_height?.message}>
                 <input type="number" step="0.1" {...register('safe_fill_height', { valueAsNumber: true })} className="input-field" />
-              </Field>
-              <Field label="Min Operating Level" error={errors.min_operating_level?.message}>
-                <input type="number" step="0.1" {...register('min_operating_level', { valueAsNumber: true })} className="input-field" />
-              </Field>
-              <Field label="Ref Gauge Height" error={errors.ref_gauge_height?.message}>
-                <input type="number" step="0.1" {...register('ref_gauge_height', { valueAsNumber: true })} className="input-field" />
-              </Field>
-              <Field label="Datum Height" error={errors.datum_height?.message}>
-                <input type="number" step="0.1" {...register('datum_height', { valueAsNumber: true })} className="input-field" />
-              </Field>
-              <Field label="Working Capacity" error={errors.working_capacity?.message}>
-                <input type="number" step="0.1" {...register('working_capacity', { valueAsNumber: true })} className="input-field" />
               </Field>
               <Field label="Remarks" error={errors.remarks?.message}>
                 <input {...register('remarks')} className="input-field" />
@@ -213,8 +189,7 @@ export default function TankMaster() {
             <tr>
               <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Tank No</th>
               <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Location</th>
-              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Farm</th>
-              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Product</th>
+              <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Service</th>
               <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Type</th>
               <th className="text-left px-2 py-1.5 font-medium text-dragon-text-secondary">Roof</th>
               <th className="text-right px-2 py-1.5 font-medium text-dragon-text-secondary">Safe Fill</th>
@@ -226,16 +201,15 @@ export default function TankMaster() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11} className="text-center py-8"><div className="loading-state"><div className="loading-spinner" /><span>Loading...</span></div></td></tr>
+              <tr><td colSpan={10} className="text-center py-8"><div className="loading-state"><div className="loading-spinner" /><span>Loading...</span></div></td></tr>
             ) : tanks.length === 0 ? (
-              <tr><td colSpan={11} className="text-center py-8"><div className="empty-state"><span className="empty-state-text">No tanks found</span></div></td></tr>
+              <tr><td colSpan={10} className="text-center py-8"><div className="empty-state"><span className="empty-state-text">No tanks found</span></div></td></tr>
             ) : (
               tanks.map((t) => (
                 <tr key={t.id} className="border-b border-dragon-border hover:bg-dragon-bg">
                   <td className="px-2 py-1 font-medium text-dragon-text">{t.tank_no}</td>
                   <td className="px-2 py-1 text-dragon-text-secondary">{t.location}</td>
-                  <td className="px-2 py-1 text-dragon-text-secondary">{t.tank_farm}</td>
-                  <td className="px-2 py-1 text-dragon-text-secondary">{t.current_product || t.normal_product || '--'}</td>
+                  <td className="px-2 py-1 text-dragon-text-secondary">{t.current_product || '--'}</td>
                   <td className="px-2 py-1 text-dragon-text-secondary">{t.tank_type || '--'}</td>
                   <td className="px-2 py-1 text-dragon-text-secondary">{t.roof_type || '--'}</td>
                   <td className="px-2 py-1 text-right text-dragon-text-secondary">{t.safe_fill_height ?? '--'}</td>
