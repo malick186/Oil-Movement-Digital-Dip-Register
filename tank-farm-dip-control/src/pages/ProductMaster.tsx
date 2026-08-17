@@ -6,6 +6,7 @@ import type { Product } from '../types';
 import * as api from '../services/api';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { useToastStore } from '../store/toastStore';
+import EntryLine from '../components/EntryLine';
 
 export default function ProductMaster() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -81,26 +82,26 @@ export default function ProductMaster() {
         <div className="glass-panel p-4">
           <h3 className="text-lg font-bold text-dragon-text mb-3">{editingId ? 'Edit Product' : 'New Product'}</h3>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Name <span className="text-dragon-danger">*</span></label>
-                <input {...register('name')} className="input-field" />
-                {errors.name && <p className="text-dragon-danger text-xs mt-0.5">{errors.name.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Product Name</label>
-                <input {...register('category')} className="input-field" placeholder="e.g. Crude, HSFO, HSD" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Remarks</label>
-                <input {...register('remarks')} className="input-field" />
-              </div>
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
-                  <input type="checkbox" {...register('active')} /> Active
-                </label>
-              </div>
-            </div>
+            <EntryLine
+              columns={[
+                {
+                  label: 'Name', required: true, error: errors.name?.message, width: 'm',
+                  children: <input {...register('name')} className="input-field entry-m" />,
+                },
+                {
+                  label: 'Product Name', error: errors.category?.message, width: 'm',
+                  children: <input {...register('category')} className="input-field entry-m" placeholder="e.g. Crude, HSFO, HSD" />,
+                },
+                {
+                  label: 'Remarks', error: errors.remarks?.message, width: 'm',
+                  children: <input {...register('remarks')} className="input-field entry-m" />,
+                },
+                {
+                  label: 'Active', width: 's',
+                  children: <input type="checkbox" {...register('active')} className="entry-ck" />,
+                },
+              ]}
+            />
             <div className="flex gap-2 mt-4">
               <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Saving...' : (editingId ? 'Update Product' : 'Create Product')}</button>
               <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="btn btn-secondary">Cancel</button>

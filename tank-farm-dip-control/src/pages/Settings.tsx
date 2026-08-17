@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as api from '../services/api';
 import type { Product, Tank, ToleranceSetting } from '../types';
 import { AlertTriangle, Plus, Save } from 'lucide-react';
+import EntryLine from '../components/EntryLine';
 
 const emptyRule = {
   tank_id: '',
@@ -149,41 +150,56 @@ export default function Settings() {
           <Plus size={16} className="text-dragon-primary" />
           <h3 className="text-sm font-semibold text-dragon-text">Add Gauging Tolerance Rule</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          <Field label="Tank Scope (optional)">
-            <select value={newRule.tank_id} onChange={(e) => setNewRule((r) => ({ ...r, tank_id: e.target.value }))} className="input-field">
-              <option value="">All Tanks</option>
-              {tanks.filter((t) => Boolean(t.active)).map((t) => <option key={t.id} value={t.id}>{t.tank_no}</option>)}
-            </select>
-          </Field>
-          <Field label="Product Scope (optional)">
-            <select value={newRule.product_id} onChange={(e) => setNewRule((r) => ({ ...r, product_id: e.target.value }))} className="input-field">
-              <option value="">All Products</option>
-              {products.filter((p) => Boolean(p.active)).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </Field>
-          <Field label="Location Scope (optional)">
-            <input value={newRule.location} onChange={(e) => setNewRule((r) => ({ ...r, location: e.target.value }))} className="input-field" placeholder="e.g. Keamari Terminal" />
-          </Field>
-          <Field label="Comparison">
-            <select value={newRule.comparison_type} onChange={(e) => setNewRule((r) => ({ ...r, comparison_type: e.target.value }))} className="input-field">
-              <option value="gross_auto">Gross vs Auto</option>
-              <option value="gross_radar">Gross vs Radar</option>
-              <option value="auto_radar">Auto vs Radar</option>
-            </select>
-          </Field>
-          <Field label="Normal Limit (mm)">
-            <input type="number" min="0" step="0.01" value={newRule.normal_limit} onChange={(e) => setNewRule((r) => ({ ...r, normal_limit: e.target.value }))} className="input-field" />
-          </Field>
-          <Field label="Attention Limit (mm)">
-            <input type="number" min="0" step="0.01" value={newRule.attention_limit} onChange={(e) => setNewRule((r) => ({ ...r, attention_limit: e.target.value }))} className="input-field" />
-          </Field>
-          <Field label="Recheck Limit (mm)">
-            <input type="number" min="0" step="0.01" value={newRule.recheck_limit} onChange={(e) => setNewRule((r) => ({ ...r, recheck_limit: e.target.value }))} className="input-field" />
-          </Field>
-          <div className="flex items-end">
-            <button onClick={createRule} disabled={saving} className="btn btn-primary w-full">{saving ? 'Saving...' : 'Add Rule'}</button>
-          </div>
+        <EntryLine
+          columns={[
+            {
+              label: 'Tank Scope (optional)', width: 's',
+              children: (
+                <select value={newRule.tank_id} onChange={(e) => setNewRule((r) => ({ ...r, tank_id: e.target.value }))} className="input-field entry-s">
+                  <option value="">All Tanks</option>
+                  {tanks.filter((t) => Boolean(t.active)).map((t) => <option key={t.id} value={t.id}>{t.tank_no}</option>)}
+                </select>
+              ),
+            },
+            {
+              label: 'Product Scope (optional)', width: 's',
+              children: (
+                <select value={newRule.product_id} onChange={(e) => setNewRule((r) => ({ ...r, product_id: e.target.value }))} className="input-field entry-s">
+                  <option value="">All Products</option>
+                  {products.filter((p) => Boolean(p.active)).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              ),
+            },
+            {
+              label: 'Location Scope (optional)', width: 'm',
+              children: <input value={newRule.location} onChange={(e) => setNewRule((r) => ({ ...r, location: e.target.value }))} className="input-field entry-m" placeholder="e.g. Keamari Terminal" />,
+            },
+            {
+              label: 'Comparison', width: 'm',
+              children: (
+                <select value={newRule.comparison_type} onChange={(e) => setNewRule((r) => ({ ...r, comparison_type: e.target.value }))} className="input-field entry-m">
+                  <option value="gross_auto">Gross vs Auto</option>
+                  <option value="gross_radar">Gross vs Radar</option>
+                  <option value="auto_radar">Auto vs Radar</option>
+                </select>
+              ),
+            },
+            {
+              label: 'Normal Limit (mm)', width: 'num',
+              children: <input type="number" min="0" step="0.01" value={newRule.normal_limit} onChange={(e) => setNewRule((r) => ({ ...r, normal_limit: e.target.value }))} className="input-field entry-num" />,
+            },
+            {
+              label: 'Attention Limit (mm)', width: 'num',
+              children: <input type="number" min="0" step="0.01" value={newRule.attention_limit} onChange={(e) => setNewRule((r) => ({ ...r, attention_limit: e.target.value }))} className="input-field entry-num" />,
+            },
+            {
+              label: 'Recheck Limit (mm)', width: 'num',
+              children: <input type="number" min="0" step="0.01" value={newRule.recheck_limit} onChange={(e) => setNewRule((r) => ({ ...r, recheck_limit: e.target.value }))} className="input-field entry-num" />,
+            },
+          ]}
+        />
+        <div className="entry-actions">
+          <button onClick={createRule} disabled={saving} className="btn btn-primary">{saving ? 'Saving...' : 'Add Rule'}</button>
         </div>
       </div>
 
@@ -275,10 +291,6 @@ export default function Settings() {
       </div>
     </div>
   );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div><label className="block text-xs font-medium text-dragon-text-secondary mb-1">{label}</label>{children}</div>;
 }
 
 function LimitInput({ value, onCommit }: { value: number; onCommit: (value: number) => void }) {

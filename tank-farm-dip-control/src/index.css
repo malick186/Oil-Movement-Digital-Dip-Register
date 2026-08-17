@@ -494,7 +494,7 @@
   border-collapse: collapse;
 }
 .data-table th {
-  text-align: left;
+  text-align: center; /* U-8: headers centered */
   padding: 0.5rem 0.75rem;
   font-size: 0.6875rem;
   font-weight: 600;
@@ -504,6 +504,8 @@
   border-bottom: 1px solid var(--dr-border);
 }
 .data-table td {
+  text-align: center;        /* U-8: cells centered */
+  vertical-align: middle;    /* U-8: vertically centered */
   padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
   color: var(--dr-text-dark);
@@ -513,6 +515,45 @@
 .data-table tr:hover td {
   background: color-mix(in srgb, var(--dr-accent) 40%, transparent);
 }
+
+/* ===== SINGLE-LINE ENTRY FORMS (U-5 / U-7) =====
+   One straight line per form: column headings on top, inputs directly below.
+   Wide forms scroll horizontally instead of wrapping. */
+.entry-line-wrap { overflow-x: auto; }
+.entry-line {
+  border-collapse: separate;
+  border-spacing: 6px 4px;
+  width: max-content;
+}
+.entry-line th {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--dr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  white-space: nowrap;
+  padding: 4px 4px;
+  border-bottom: 1px solid var(--dr-border);
+}
+.entry-line td {
+  padding: 2px 4px;
+  vertical-align: top;
+}
+.entry-line .input-field { min-width: 0; width: 100%; }
+.entry-line .entry-num { width: 86px; }
+.entry-line .entry-s   { width: 112px; }
+.entry-line .entry-m   { width: 150px; }
+.entry-line .entry-l   { width: 190px; }
+.entry-line .entry-date { width: 132px; }
+.entry-line .entry-ck  { width: 16px; height: 16px; margin-top: 8px; }
+.entry-line .entry-ro  { display: flex; align-items: center; min-height: 34px; font-size: 0.8125rem; }
+/* Temperature value + C/F unit side by side, aligned inline (fixes U-5) */
+.entry-line .temp-cell { display: flex; gap: 4px; align-items: center; }
+.entry-line .temp-cell input { width: 64px; }
+.entry-line .temp-cell select { width: 50px; padding: 5px 2px; text-align: center; }
+.entry-line td .field-error { color: var(--dr-danger); font-size: 0.625rem; margin-top: 2px; white-space: nowrap; }
+.entry-actions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ===== SCROLLBAR FOR CONTENT ===== */
 .content-scroll {

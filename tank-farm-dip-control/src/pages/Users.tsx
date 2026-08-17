@@ -6,6 +6,7 @@ import type { User } from '../types';
 import * as api from '../services/api';
 import { Plus, UserCheck, UserX } from 'lucide-react';
 import { useToastStore } from '../store/toastStore';
+import EntryLine from '../components/EntryLine';
 
 export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
@@ -65,32 +66,32 @@ export default function Users() {
         <div className="glass-panel p-4">
           <h3 className="text-lg font-bold text-dragon-text mb-3">New User</h3>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Username <span className="text-dragon-danger">*</span></label>
-                <input {...register('username')} className="input-field" autoComplete="off" />
-                {errors.username && <p className="text-dragon-danger text-xs mt-0.5">{errors.username.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Full Name <span className="text-dragon-danger">*</span></label>
-                <input {...register('full_name')} className="input-field" />
-                {errors.full_name && <p className="text-dragon-danger text-xs mt-0.5">{errors.full_name.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Password <span className="text-dragon-danger">*</span></label>
-                <input type="password" {...register('password')} className="input-field" autoComplete="new-password" />
-                {errors.password && <p className="text-dragon-danger text-xs mt-0.5">{errors.password.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Role <span className="text-dragon-danger">*</span></label>
-                <select {...register('role')} className="input-field">
-                  <option value="Shift In-Charge">Shift In-Charge</option>
-                  <option value="Shift Supervisor">Shift Supervisor</option>
-                  <option value="Administrator">Administrator</option>
-                </select>
-                {errors.role && <p className="text-dragon-danger text-xs mt-0.5">{errors.role.message}</p>}
-              </div>
-            </div>
+            <EntryLine
+              columns={[
+                {
+                  label: 'Username', required: true, error: errors.username?.message, width: 'm',
+                  children: <input {...register('username')} className="input-field entry-m" autoComplete="off" />,
+                },
+                {
+                  label: 'Full Name', required: true, error: errors.full_name?.message, width: 'l',
+                  children: <input {...register('full_name')} className="input-field entry-l" />,
+                },
+                {
+                  label: 'Password', required: true, error: errors.password?.message, width: 'm',
+                  children: <input type="password" {...register('password')} className="input-field entry-m" autoComplete="new-password" />,
+                },
+                {
+                  label: 'Role', required: true, error: errors.role?.message, width: 'm',
+                  children: (
+                    <select {...register('role')} className="input-field entry-m">
+                      <option value="Shift In-Charge">Shift In-Charge</option>
+                      <option value="Shift Supervisor">Shift Supervisor</option>
+                      <option value="Administrator">Administrator</option>
+                    </select>
+                  ),
+                },
+              ]}
+            />
             <div className="flex gap-2 mt-4">
               <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Creating...' : 'Create User'}</button>
               <button type="button" onClick={() => { setShowForm(false); }} className="btn btn-secondary">Cancel</button>

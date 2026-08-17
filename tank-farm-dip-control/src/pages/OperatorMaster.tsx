@@ -6,6 +6,7 @@ import type { Operator } from '../types';
 import * as api from '../services/api';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { useToastStore } from '../store/toastStore';
+import EntryLine from '../components/EntryLine';
 
 export default function OperatorMaster() {
   const [operators, setOperators] = useState<Operator[]>([]);
@@ -61,39 +62,38 @@ export default function OperatorMaster() {
         <div className="glass-panel p-4">
           <h3 className="text-lg font-bold text-dragon-text mb-3">{editingId ? 'Edit Operator' : 'New Operator'}</h3>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Employee ID</label>
-                <input {...register('employee_id')} className="input-field" placeholder="Optional" />
-                {errors.employee_id && <p className="text-dragon-danger text-xs mt-0.5">{errors.employee_id.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Name <span className="text-dragon-danger">*</span></label>
-                <input {...register('name')} className="input-field" />
-                {errors.name && <p className="text-dragon-danger text-xs mt-0.5">{errors.name.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Designation</label>
-                <input {...register('designation')} className="input-field" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Location</label>
-                <input {...register('location')} className="input-field" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Shift Group</label>
-                <input {...register('shift_group')} className="input-field" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dragon-text-secondary mb-1">Remarks</label>
-                <input {...register('remarks')} className="input-field" />
-              </div>
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
-                  <input type="checkbox" {...register('active')} /> Active
-                </label>
-              </div>
-            </div>
+            <EntryLine
+              columns={[
+                {
+                  label: 'Employee ID', error: errors.employee_id?.message, width: 's',
+                  children: <input {...register('employee_id')} className="input-field entry-s" placeholder="Optional" />,
+                },
+                {
+                  label: 'Name', required: true, error: errors.name?.message, width: 'm',
+                  children: <input {...register('name')} className="input-field entry-m" />,
+                },
+                {
+                  label: 'Designation', error: errors.designation?.message, width: 'm',
+                  children: <input {...register('designation')} className="input-field entry-m" />,
+                },
+                {
+                  label: 'Location', error: errors.location?.message, width: 'm',
+                  children: <input {...register('location')} className="input-field entry-m" />,
+                },
+                {
+                  label: 'Shift Group', error: errors.shift_group?.message, width: 's',
+                  children: <input {...register('shift_group')} className="input-field entry-s" />,
+                },
+                {
+                  label: 'Remarks', error: errors.remarks?.message, width: 'm',
+                  children: <input {...register('remarks')} className="input-field entry-m" />,
+                },
+                {
+                  label: 'Active', width: 's',
+                  children: <input type="checkbox" {...register('active')} className="entry-ck" />,
+                },
+              ]}
+            />
             <div className="flex gap-2 mt-4">
               <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Saving...' : (editingId ? 'Update Operator' : 'Create Operator')}</button>
               <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="btn btn-secondary">Cancel</button>

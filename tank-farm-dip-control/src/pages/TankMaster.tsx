@@ -6,6 +6,7 @@ import type { Tank } from '../types';
 import * as api from '../services/api';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { useToastStore } from '../store/toastStore';
+import EntryLine from '../components/EntryLine';
 
 export default function TankMaster() {
   const [tanks, setTanks] = useState<Tank[]>([]);
@@ -119,54 +120,62 @@ export default function TankMaster() {
             {editingId ? 'Edit Tank' : 'New Tank'}
           </h3>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              <Field label="Tank No" required error={errors.tank_no?.message}>
-                <input {...register('tank_no')} className="input-field" />
-              </Field>
-              <Field label="Location" required error={errors.location?.message}>
-                <input {...register('location')} className="input-field" />
-              </Field>
-              <Field label="Current Service" error={errors.current_product?.message}>
-                <input {...register('current_product')} className="input-field" placeholder="e.g. Crude, HSFO, HSD" />
-              </Field>
-              <Field label="Reference Point" error={errors.reference_point?.message}>
-                <input {...register('reference_point')} className="input-field" />
-              </Field>
-              <Field label="Tank Type" error={errors.tank_type?.message}>
-                <input {...register('tank_type')} className="input-field" />
-              </Field>
-              <Field label="Roof Type" error={errors.roof_type?.message}>
-                <input {...register('roof_type')} className="input-field" />
-              </Field>
-              <Field label="Safe Fill Height" error={errors.safe_fill_height?.message}>
-                <input type="number" step="0.1" {...register('safe_fill_height', { valueAsNumber: true })} className="input-field" />
-              </Field>
-              <Field label="Remarks" error={errors.remarks?.message}>
-                <input {...register('remarks')} className="input-field" />
-              </Field>
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
-                  <input type="checkbox" {...register('radar_available')} />
-                  Radar Available
-                </label>
-                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
-                  <input type="checkbox" {...register('auto_dip_available')} />
-                  Auto Dip Available
-                </label>
-                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
-                  <input type="checkbox" {...register('water_dip_applicable')} />
-                  Water Dip
-                </label>
-                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
-                  <input type="checkbox" {...register('sludge_dip_applicable')} />
-                  Sludge Dip
-                </label>
-                <label className="flex items-center gap-2 text-xs text-dragon-text-secondary">
-                  <input type="checkbox" {...register('active')} />
-                  Active
-                </label>
-              </div>
-            </div>
+            <EntryLine
+              columns={[
+                {
+                  label: 'Tank No', required: true, error: errors.tank_no?.message, width: 's',
+                  children: <input {...register('tank_no')} className="input-field entry-s" />,
+                },
+                {
+                  label: 'Location', required: true, error: errors.location?.message, width: 'm',
+                  children: <input {...register('location')} className="input-field entry-m" />,
+                },
+                {
+                  label: 'Current Service', error: errors.current_product?.message, width: 'm',
+                  children: <input {...register('current_product')} className="input-field entry-m" placeholder="e.g. Crude, HSFO, HSD" />,
+                },
+                {
+                  label: 'Reference Point', error: errors.reference_point?.message, width: 's',
+                  children: <input {...register('reference_point')} className="input-field entry-s" />,
+                },
+                {
+                  label: 'Tank Type', error: errors.tank_type?.message, width: 's',
+                  children: <input {...register('tank_type')} className="input-field entry-s" />,
+                },
+                {
+                  label: 'Roof Type', error: errors.roof_type?.message, width: 's',
+                  children: <input {...register('roof_type')} className="input-field entry-s" />,
+                },
+                {
+                  label: 'Safe Fill Height', error: errors.safe_fill_height?.message, width: 'num',
+                  children: <input type="number" step="0.1" {...register('safe_fill_height', { valueAsNumber: true })} className="input-field entry-num" />,
+                },
+                {
+                  label: 'Remarks', error: errors.remarks?.message, width: 'l',
+                  children: <input {...register('remarks')} className="input-field entry-l" />,
+                },
+                {
+                  label: 'Radar Available', width: 's',
+                  children: <input type="checkbox" {...register('radar_available')} className="entry-ck" />,
+                },
+                {
+                  label: 'Auto Dip Available', width: 's',
+                  children: <input type="checkbox" {...register('auto_dip_available')} className="entry-ck" />,
+                },
+                {
+                  label: 'Water Dip', width: 's',
+                  children: <input type="checkbox" {...register('water_dip_applicable')} className="entry-ck" />,
+                },
+                {
+                  label: 'Sludge Dip', width: 's',
+                  children: <input type="checkbox" {...register('sludge_dip_applicable')} className="entry-ck" />,
+                },
+                {
+                  label: 'Active', width: 's',
+                  children: <input type="checkbox" {...register('active')} className="entry-ck" />,
+                },
+              ]}
+            />
             <div className="flex gap-2 mt-4">
               <button type="submit" className="btn btn-primary" disabled={submitting}>
                 {submitting ? 'Saving...' : (editingId ? 'Update Tank' : 'Create Tank')}
@@ -232,23 +241,6 @@ export default function TankMaster() {
           </tbody>
         </table>
       </div>
-    </div>
-  );
-}
-
-function Field({ label, required, error, children }: {
-  label: string;
-  required?: boolean;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-dragon-text-secondary mb-1">
-        {label} {required && <span className="text-dragon-danger">*</span>}
-      </label>
-      {children}
-      {error && <p className="text-dragon-danger text-xs mt-0.5">{error}</p>}
     </div>
   );
 }
