@@ -33,7 +33,10 @@ export const tankSchema = z.object({
   tank_no: z.string().min(1, 'Tank number is required'),
   location: z.string().min(1, 'Location is required'),
   current_product: z.string().optional(),
-  reference_point: z.string().min(1, 'Reference point is required'),
+  reference_point: z.string().min(1, 'Reference point is required')
+    .refine((v) => !Number.isNaN(Number(v)) && Number(v) > 0, 'Reference point must be a positive number'),
+  ref_gauge_height: z.number().positive('Reference Gauge Height must be a positive number').nullable().optional(),
+  datum_height: z.number().nullable().optional(),
   tank_type: z.string().optional(),
   roof_type: z.string().optional(),
   safe_fill_height: z.number().nullable().optional(),

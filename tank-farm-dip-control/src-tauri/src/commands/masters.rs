@@ -32,6 +32,24 @@ fn require_optional_text(value: &Option<String>, label: &str) -> Result<(), Stri
     }
 }
 
+fn require_positive_number(value: Option<f64>, label: &str) -> Result<(), String> {
+    match value {
+        Some(v) if v.is_finite() && v > 0.0 => Ok(()),
+        _ => Err(format!("{} must be a positive number", label)),
+    }
+}
+
+/// Validates an optional height field stored as TEXT (e.g. Reference Point) is a positive number.
+fn require_numeric_text(value: &Option<String>, label: &str) -> Result<(), String> {
+    match value.as_deref().map(str::trim) {
+        Some(v) if !v.is_empty() => match v.parse::<f64>() {
+            Ok(n) if n.is_finite() && n > 0.0 => Ok(()),
+            _ => Err(format!("{} must be a positive number", label)),
+        },
+        _ => Err(format!("{} is required", label)),
+    }
+}
+
 fn query_tank(row: &rusqlite::Row) -> rusqlite::Result<Tank> {
     Ok(Tank {
         id: row.get(0)?,
@@ -116,7 +134,10 @@ pub fn create_tank(
     let session = require_roles(&current_session, ADMIN_ONLY)?;
     require_text(&data.tank_no, "Tank No.")?;
     require_optional_text(&data.location, "Location")?;
-    require_optional_text(&data.reference_point, "Reference Point")?;
+    require_numeric_text(&data.reference_point, "Reference Point")?;
+    if data.ref_gauge_height.is_some() {
+        require_positive_number(data.ref_gauge_height, "Reference Gauge Height")?;
+    }
 
     let tank_no = data.tank_no.trim().to_string();
     let conn = db.lock().map_err(|e| e.to_string())?;
@@ -178,7 +199,8 @@ pub fn update_tank(
 
     if let Some(ref value) = data.tank_no { require_text(value, "Tank No.")?; }
     if let Some(ref value) = data.location { require_text(value, "Location")?; }
-    if let Some(ref value) = data.reference_point { require_text(value, "Reference Point")?; }
+    if data.reference_point.is_some() { require_numeric_text(&data.reference_point, "Reference Point")?; }
+    if data.ref_gauge_height.is_some() { require_positive_number(data.ref_gauge_height, "Reference Gauge Height")?; }
 
     conn.execute(
         "UPDATE tanks SET
@@ -217,6 +239,14 @@ pub fn update_tank(
     .map_err(|e| format!("Failed to update Tank: {}", e))?;
 
     let updated = get_tank_raw(&conn, id)?;
+    let fmt_ref = |t: &Tank| {
+        format!(
+            "reference_point={} | ref_gauge_height={} | datum_height={}",
+            t.reference_point.as_deref().unwrap_or("-"),
+            t.ref_gauge_height.map(|v| v.to_string()).unwrap_or_else(|| "-".to_string()),
+            t.datum_height.map(|v| v.to_string()).unwrap_or_else(|| "-".to_string()),
+        )
+    };
     audit_log(
         &conn,
         session.user_id,
@@ -224,8 +254,8 @@ pub fn update_tank(
         "update_tank",
         None,
         Some(&updated.tank_no),
-        Some(&existing.tank_no),
-        Some(&updated.tank_no),
+        Some(&fmt_ref(&existing)),
+        Some(&fmt_ref(&updated)),
         None,
         Some("Tank Master record updated"),
     );

@@ -70,6 +70,8 @@ export default function TankMaster() {
       location: tank.location,
       current_product: tank.current_product,
       reference_point: tank.reference_point,
+      ref_gauge_height: tank.ref_gauge_height ?? null,
+      datum_height: tank.datum_height ?? null,
       tank_type: tank.tank_type,
       roof_type: tank.roof_type,
       safe_fill_height: tank.safe_fill_height,
@@ -135,8 +137,16 @@ export default function TankMaster() {
                   children: <input {...register('current_product')} className="input-field entry-m" placeholder="e.g. Crude, HSFO, HSD" />,
                 },
                 {
-                  label: 'Reference Point', error: errors.reference_point?.message, width: 's',
+                  label: 'Reference Point', required: true, error: errors.reference_point?.message, width: 's',
                   children: <input {...register('reference_point')} className="input-field entry-s" />,
+                },
+                {
+                  label: 'Ref Gauge Height (mm)', error: errors.ref_gauge_height?.message, width: 'num',
+                  children: <input type="number" step="0.1" {...register('ref_gauge_height', { setValueAs: (v) => (v === '' ? null : Number(v)) })} className="input-field entry-num" placeholder="Optional" />,
+                },
+                {
+                  label: 'Datum Height (mm)', error: errors.datum_height?.message, width: 'num',
+                  children: <input type="number" step="0.1" {...register('datum_height', { setValueAs: (v) => (v === '' ? null : Number(v)) })} className="input-field entry-num" placeholder="Optional" />,
                 },
                 {
                   label: 'Tank Type', error: errors.tank_type?.message, width: 's',
