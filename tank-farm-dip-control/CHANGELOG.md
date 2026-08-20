@@ -5,6 +5,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ---
 
+## [0.3.1] - 2026-08-17
+
+### Added
+- **Same-tank previous history in the review card** — when a Shift In-Charge / Administrator reviews a Dip Record, the dialog now shows the tank's last 10 recordings (most recent first, excluding the record under review) with date/time, gross/auto/radar/water/sludge dips, temperature, density, status and operator, for faster, data-backed approval decisions.
+- **Tank reference gauging fields** — `ref_gauge_height` (Reference Gauge Height) and `datum_height` are now editable in the Tank Master form (previously DB-only).
+
+### Changed
+- **Review / record / exception dialogs centered in the viewport** — the page container's `view-transition-name` was (per CSS spec) the containing block for `position: fixed` descendants, so dialogs rendered top-aligned with hidden content; all three now render via a React portal to `document.body`.
+- **Wider review dialog & larger default window** — dialog `max-w-3xl → max-w-5xl` (history table no longer needs a horizontal scrollbar); window `1400×900 → 1560×1000` (min `1280×800`) so 3–4 history rows are visible with vertical scrolling.
+- **User Management** — added Edit-details and Remove-user actions (with username-uniqueness, password-reset ≥ 8 chars, last-active-Administrator and self-protection guards; all audited).
+
+### Fixed
+- **Reference Point / Reference Gauge Height validation** — both now require positive numbers (frontend zod + backend); `update_tank` audit now records old → new values for `reference_point`, `ref_gauge_height` and `datum_height` (previously only the tank number was logged).
+
+---
+
 ## [0.3.0] - 2026-08-17
 
 ### Added
@@ -51,5 +67,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 - Initial portable release: authentication + first-run admin bootstrap, Tank/Operator/Product/Shift/Tank-Status masters, dip recording with validation and auto-computed differences, Shift In-Charge review/approval workflow, physical recheck workflow, corrections workflow, exceptions/tolerance engine, shift closing, dashboard, CSV report export, SQLite backup/restore (VACUUM INTO), audit log, settings, portable layout (Data/Config/Logs/Reports/Backup/Temp beside the executable), migration from the user-local database.
 
+[0.3.1]: https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases/tag/v0.3.1
 [0.3.0]: https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases/tag/v0.3.0
 [0.2.0]: https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases/tag/v0.2.0
