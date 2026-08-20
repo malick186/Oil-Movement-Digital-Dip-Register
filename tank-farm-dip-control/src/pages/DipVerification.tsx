@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { DipRecordWithRelations } from '../types';
 import * as api from '../services/api';
 import { useToastStore } from '../store/toastStore';
@@ -125,7 +126,7 @@ export default function DipVerification() {
         </div>
       )}
 
-      {selectedRecord && (
+      {selectedRecord && createPortal(
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           role="dialog"
@@ -208,7 +209,7 @@ export default function DipVerification() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }

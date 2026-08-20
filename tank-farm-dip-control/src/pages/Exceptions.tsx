@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import * as api from '../services/api';
 import type { Exception } from '../types';
 import { useToastStore } from '../store/toastStore';
@@ -184,7 +185,7 @@ export default function Exceptions() {
         </table>
       </div>
 
-      {selectedId != null && (
+      {selectedId != null && createPortal(
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
           role="dialog"
@@ -218,7 +219,7 @@ export default function Exceptions() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }

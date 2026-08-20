@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { DipCorrection, DipRecordWithRelations, Operator, Product, Tank, TankStatus } from '../types';
 import * as api from '../services/api';
 import DragTable, { type ColumnDef } from '../components/DragTable';
@@ -212,7 +213,7 @@ export default function DipHistory() {
         <DragTable columns={columns} data={records} storageKey="dip-history" rowKey={(r) => r.id} />
       )}
 
-      {selected && (
+      {selected && createPortal(
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="glass-panel w-full max-w-4xl max-h-[90vh] overflow-auto p-5">
             <div className="flex items-start justify-between gap-4 mb-4">
@@ -296,7 +297,7 @@ export default function DipHistory() {
             {message && <div className="notice-banner info mt-4">{message}</div>}
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }
