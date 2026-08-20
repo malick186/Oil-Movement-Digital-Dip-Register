@@ -150,7 +150,7 @@ export default function DipVerification() {
           aria-label={`Verify ${selectedRecord.record_number}`}
           onKeyDown={(e) => { if (e.key === 'Escape' && reviewingId == null) setSelectedRecord(null); }}
         >
-          <div className="glass-panel p-6 w-full max-w-3xl max-h-[90vh] overflow-auto">
+          <div className="glass-panel p-6 w-full max-w-5xl max-h-[90vh] overflow-auto">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h3 className="text-lg font-bold text-dragon-text">{selectedRecord.record_number}</h3>
