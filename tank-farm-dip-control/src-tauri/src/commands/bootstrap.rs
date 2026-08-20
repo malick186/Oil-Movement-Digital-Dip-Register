@@ -2,6 +2,7 @@ use rusqlite::params;
 use std::sync::Mutex;
 
 use crate::models::UserSession;
+use crate::storage::write_session_identity_with_user;
 use crate::util::audit_log;
 
 #[tauri::command]
@@ -103,6 +104,8 @@ pub fn bootstrap_admin(
         full_name,
         role: "Administrator".to_string(),
     };
+
+    write_session_identity_with_user(&session.username, &session.role);
 
     let mut sess = current_session.lock().map_err(|e| e.to_string())?;
     *sess = Some(session.clone());

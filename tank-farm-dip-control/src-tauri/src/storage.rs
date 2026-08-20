@@ -136,14 +136,41 @@ pub fn write_session_identity(paths: &PortablePaths) {
     );
 }
 
-/// Human-readable identity of the current holder (e.g. "Shift Supervisor on PC-02").
+/// Records the app-login identity (username + role) of the current holder.
+pub fn write_session_identity_with_user(app_user: &str, app_role: &str) {
+    let Ok(paths) = PortablePaths::discover() else { return };
+    let (computer, user) = machine_identity();
+    let _ = fs::write(
+        paths.config.join(SESSION_FILE),
+        format!(
+            "computer={computer}\nuser={user}\napp_user={app_user}\napp_role={app_role}\nstarted_at={}\n",
+            chrono::Local::now().to_rfc3339()
+        ),
+    );
+}
+
+/// Reverts the holder identity to OS identity only (used on logout).
+pub fn clear_session_user() {
+    if let Ok(paths) = PortablePaths::discover() {
+        write_session_identity(&paths);
+    }
+}
+
+/// Human-readable identity of the current holder, preferring the app-login identity
+/// (e.g. "Talha (Shift In-Charge) on PC-02") over the OS user.
 pub fn read_session_identity(paths: &PortablePaths) -> Option<String> {
     let content = fs::read_to_string(paths.config.join(SESSION_FILE)).ok()?;
     let mut computer = String::new();
     let mut user = String::new();
+    let mut app_user = String::new();
+    let mut app_role = String::new();
     for line in content.lines() {
         if let Some(v) = line.strip_prefix("computer=") {
             computer = v.to_string();
+        } else if let Some(v) = line.strip_prefix("app_user=") {
+            app_user = v.to_string();
+        } else if let Some(v) = line.strip_prefix("app_role=") {
+            app_role = v.to_string();
         } else if let Some(v) = line.strip_prefix("user=") {
             user = v.to_string();
         }
@@ -151,10 +178,21 @@ pub fn read_session_identity(paths: &PortablePaths) -> Option<String> {
     if computer.is_empty() {
         return None;
     }
-    Some(if user.is_empty() || user == computer {
+    let who = if !app_user.is_empty() {
+        if !app_role.is_empty() {
+            format!("{app_user} ({app_role})")
+        } else {
+            app_user
+        }
+    } else if !user.is_empty() && user != computer {
+        user
+    } else {
+        String::new()
+    };
+    Some(if who.is_empty() {
         computer
     } else {
-        format!("{user} on {computer}")
+        format!("{who} on {computer}")
     })
 }
 

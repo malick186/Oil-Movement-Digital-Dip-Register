@@ -2,7 +2,9 @@ use rusqlite::params;
 use std::sync::Mutex;
 
 use crate::models::{CreateUserRequest, UpdateUserRequest, User, UserSession};
-use crate::storage::{clear_access_request, PortablePaths};
+use crate::storage::{
+    clear_access_request, clear_session_user, write_session_identity_with_user, PortablePaths,
+};
 use crate::util::{audit_log, require_roles};
 
 const ALLOWED_ROLES: &[&str] = &["Shift Supervisor", "Shift In-Charge", "Administrator"];
@@ -64,6 +66,8 @@ pub fn login(
         Some("User logged in"),
     );
 
+    write_session_identity_with_user(&session.username, &session.role);
+
     let mut state = current_session.lock().map_err(|e| e.to_string())?;
     *state = Some(session.clone());
     Ok(session)
@@ -91,6 +95,7 @@ pub fn logout(
         );
     }
     *state = None;
+    clear_session_user();
     Ok(())
 }
 
