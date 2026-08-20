@@ -41,6 +41,8 @@ interface NavItem {
 }
 
 const pageRoles: Partial<Record<Page, string[]>> = {
+  welcome: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'],
+  changelog: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'],
   dashboard: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'],
   'new-dip': ['Shift Supervisor', 'Shift In-Charge', 'Administrator'],
   'dip-verification': ['Shift In-Charge', 'Administrator'],
