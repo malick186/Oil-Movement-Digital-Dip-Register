@@ -86,6 +86,24 @@ export async function toggleUserActive(userId: number): Promise<User> {
   return invoke('toggle_user_active', { userId });
 }
 
+export async function updateUser(
+  userId: number,
+  data: {
+    username?: string;
+    full_name?: string;
+    role?: string;
+    active?: boolean;
+    /** new password; omit or leave empty to keep the current one */
+    password?: string;
+  },
+): Promise<User> {
+  return invoke('update_user', { userId, data });
+}
+
+export async function deleteUser(userId: number): Promise<void> {
+  return invoke('delete_user', { userId });
+}
+
 // ── Dashboard ──
 
 export async function getDashboardStats(): Promise<DashboardStats> {

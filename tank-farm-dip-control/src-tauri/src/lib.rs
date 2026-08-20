@@ -59,6 +59,8 @@ pub fn run() {
             commands::auth::logout,
             commands::auth::get_current_user,
             commands::auth::create_user,
+            commands::auth::update_user,
+            commands::auth::delete_user,
             commands::auth::list_users,
             commands::auth::toggle_user_active,
             commands::dashboard::get_dashboard_stats,

@@ -42,6 +42,17 @@ pub struct CreateUserRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateUserRequest {
+    pub username: Option<String>,
+    pub full_name: Option<String>,
+    pub role: Option<String>,
+    #[serde(default, deserialize_with = "bool_int")]
+    pub active: Option<i64>,
+    /// New password; only applied when non-empty
+    pub password: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tank {
     pub id: i64,
     pub tank_no: String,
