@@ -276,6 +276,7 @@ export interface AttentionItem {
 }
 
 export type Page =
+  | 'welcome'
   | 'dashboard'
   | 'new-dip'
   | 'dip-verification'
@@ -292,4 +293,5 @@ export type Page =
   | 'users'
   | 'settings'
   | 'backup-restore'
-  | 'audit-log';
+  | 'audit-log'
+  | 'changelog';

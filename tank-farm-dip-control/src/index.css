@@ -242,10 +242,10 @@
 }
 
 .prl-brand-panel {
-  background: #ffffff;
-  border: 1px solid color-mix(in srgb, var(--dr-primary) 24%, #d9e5e0);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 10px;
-  box-shadow: 0 5px 18px rgba(0, 66, 40, 0.12);
+  box-shadow: none;
 }
 
 .prl-nav-heading {
@@ -759,7 +759,6 @@ main > div {
 }
 .prl-brand-panel:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(0, 66, 40, 0.2);
 }
 
 /* Accessibility: honour reduced-motion preference */

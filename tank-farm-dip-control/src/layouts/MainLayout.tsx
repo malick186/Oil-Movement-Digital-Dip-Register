@@ -22,6 +22,8 @@ import {
   LogOut,
   Sun,
   Moon,
+  Home,
+  ScrollText,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
@@ -65,6 +67,12 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
+    heading: 'OVERVIEW',
+    items: [
+      { page: 'welcome', label: 'Welcome', icon: <Home size={20} strokeWidth={1.5} /> },
+    ],
+  },
+  {
     heading: 'OPERATIONS',
     items: [
       { page: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} strokeWidth={1.5} /> },
@@ -99,6 +107,7 @@ const navSections: NavSection[] = [
       { page: 'settings', label: 'Settings', icon: <Settings size={20} strokeWidth={1.5} /> },
       { page: 'backup-restore', label: 'Backup & Restore', icon: <DatabaseBackup size={20} strokeWidth={1.5} /> },
       { page: 'audit-log', label: 'Audit Log', icon: <FileSearch size={20} strokeWidth={1.5} /> },
+      { page: 'changelog', label: 'Changelog', icon: <ScrollText size={20} strokeWidth={1.5} /> },
     ],
   },
 ];

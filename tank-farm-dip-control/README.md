@@ -1,133 +1,161 @@
-# Tank Farm Dip Control Center
+# Tank Farm & Terminal Dip Recording Control Center
 
-Offline-first Windows desktop application for oil movement digital dip recording and tank farm management. Built with Tauri 2.x, React 19, and Rust.
+A **local-first, offline-first Windows desktop application** for recording and verifying manual tank
+**dip (innage) readings** at an oil-movement tank farm. It replaces the paper dip register with an
+audited digital workflow — operator entry, Shift In-Charge review/approval, tolerance-based exceptions,
+physical rechecks, corrections, shift closing, CSV reporting and SQLite backup/restore.
 
-The interface uses Pakistan Refinery Limited's current corporate logo and a PRL-derived green, navy and blue color system across light and dark modes. The logo asset is sourced from the [official PRL website](https://www.prl.com.pk/wp-content/uploads/2025/03/PRL_NEW_LOGO.png) and remains a Pakistan Refinery Limited trademark.
+Built with **Tauri 2 (Rust) + React 19 + TypeScript + Vite + Tailwind CSS 4**, with a **PRL-branded**
+green/navy UI in light and dark modes. The PRL logo is a Pakistan Refinery Limited trademark
+(sourced from the [official PRL website](https://www.prl.com.pk)).
+
+---
+
+## What it does
+
+- **Dip entry** — gross, auto (ATG), radar, water and sludge dips, plus temperature and density.
+- **Review & approval chain** — Shift Supervisor submits → Shift In-Charge approves / rejects / requests recheck.
+- **Tolerance engine** — Normal / Attention / Recheck limits (per tank/product) that auto-raise exceptions.
+- **Recheck & correction workflows** for doubtful or wrongly-recorded values.
+- **Shift closing** with expected-gauging checks and unresolved-record blockers.
+- **Reporting** — CSV export (daily, shift summary, tank-wise, exceptions, audit, closing).
+- **Audit log** of every state change, **backup/restore** (consistent `VACUUM INTO` snapshots), portable storage.
+
+### Industry basis (brief)
+
+Tank gauging follows the **API Manual of Petroleum Measurement Standards (MPMS)**:
+
+| Standard | What it governs (as used here) |
+|---|---|
+| **API MPMS Ch. 3.1A** | Manual gauging — *innage* (datum plate → liquid surface) vs *outage/ullage*; calibrated tape; water-finding paste for the water dip |
+| **API MPMS Ch. 3.1B** | Automatic (radar/servo) tank gauging — the Auto / Radar Dip comparison |
+| **API MPMS Ch. 7** | Temperature determination |
+| **API MPMS Ch. 9.1 / ASTM D1298** | Density (hydrometer method) |
+| **API MPMS Ch. 12.2 / ASTM D1250** | Volume correction and rounding |
+
+Each dip record stores a **reference point snapshot** so historical readings remain traceable even if the
+tank's reference gauge height is later re-calibrated.
+
+### User roles
+
+| Role | Responsibility |
+|---|---|
+| **Administrator** | Masters (Tank / Product / Operator / Tank Status), Users, Settings, Backup & Restore, Audit Log |
+| **Shift Supervisor** | Records and submits dip observations |
+| **Shift In-Charge** | Reviews, approves / rejects / requests recheck, closes the shift |
+| **Operator** | The person who physically takes the dip (recorded via Operator Master; no login) |
+
+---
 
 ## Features
 
 ### Operations
 | Module | Description |
 |---|---|
-| **Dashboard** | 6 stat cards (Active Tanks, Dips Completed, Awaiting Review, Recheck Required, Abnormal Diff, Approved) with shift status indicator |
-| **New Dip** | Create dip records with tank/product/operator selection, auto/radar/water/sludge readings, temperature, density, tank status |
-| **Dip Verification** | Review pending dip records — approve, reject, or mark for recheck with detailed record modals |
-| **Shift Closing** | View active shifts with status cards, close shifts with remarks, view closing history |
-| **Tank Status** | Overview of all tanks with attention-worthy readings, severity badges (recheck/attention/normal), click-through to tank detail |
-| **Exceptions** | View tolerance violations and anomalies, resolve with remarks |
+| **Welcome** | App overview, feature tour, API MPMS theory, and the step-by-step workflow |
+| **Dashboard** | Stat cards (active tanks, dips completed, awaiting review, recheck required, abnormal diffs, approved) + shift status |
+| **New Dip** | Single-line entry form with tank/product/operator selection, all readings, temperature (°C/°F), density, tank status |
+| **Dip Verification** | Review pending records with the tank's **previous history**, approve / reject / request recheck |
+| **Shift Closing** | Close shifts with remarks, totals and blocking checks |
+| **Tank Status** | Tank overview with attention severity and click-through detail |
+| **Exceptions** | Tolerance violations with resolve-with-remark |
 
-### Data Management
+### Data & records
 | Module | Description |
 |---|---|
-| **Dip History** | Filterable table of all dip records with drag-and-drop column reorder |
-| **Tank Trends** | Interactive Recharts line/area chart showing gross, auto, and radar dip readings over time per tank |
-| **Reports** | Generate and export as CSV: Daily Dip, Shift Summary, Tank-wise, Exception, Audit Trail, Shift Closing reports with date/tank filters |
-| **Audit Log** | Filterable log of all system actions with timestamps, users, old/new values |
+| **Dip History** | Filterable table with drag-and-drop column reorder |
+| **Tank Trends** | Recharts line/area charts of gross/auto/radar over time per tank |
+| **Reports** | CSV exports (daily dip, shift summary, tank-wise, exceptions, audit, closing) |
 
-### Master Data
+### Master data & system
 | Module | Description |
 |---|---|
-| **Tank Master** | CRUD with 20 fields — physical parameters, boolean flags, numeric measurements with react-hook-form + Zod validation |
-| **Product Master** | CRUD for oil/petroleum product types with active/inactive toggle |
-| **Operator Master** | CRUD for operators with employee ID, designation, shift group |
-| **Tank Status Master** | CRUD for tank status definitions (In Service, Maintenance, Cleaning) with display ordering |
-| **Users** | Create users, toggle active/inactive with role assignment (Shift Supervisor, Shift In-Charge, Administrator) |
+| **Tank / Product / Operator / Tank Status Masters** | Single-line CRUD forms with validation |
+| **Users** | Create, **edit details**, **remove**, and toggle active (role-based) |
+| **Settings** | Tolerance limits (Normal ≤ Attention ≤ Recheck), operational controls, reference-data seeding |
+| **Backup & Restore** | Consistent SQLite snapshots with safe restore validation |
+| **Audit Log** | Filterable action trail with old/new values |
+| **Changelog** | In-app list of all changes from the first release |
 
-### System
-| Module | Description |
-|---|---|
-| **Settings** | Editable tolerance limits (normal, attention, recheck), read-only application settings, seed sample data |
-| **Backup & Restore** | Create and restore SQLite database backups with file size display and confirmation dialog |
+---
 
 ## Architecture
 
 ```
 tank-farm-dip-control/
-├── src/                          # React frontend
-│   ├── components/               # DragTable, ErrorBoundary, PageTransition, ProtectedRoute, ToastContainer
-│   ├── layouts/                  # MainLayout (sidebar, header, theme toggle)
-│   ├── pages/                    # 19 page components
-│   ├── services/                 # api.ts — 35 Tauri IPC invoke wrappers
-│   ├── store/                    # Zustand: appStore, authStore, themeStore, toastStore
-│   ├── types/                    # TypeScript type definitions
-│   └── validation/               # Zod schemas for all forms
-├── src-tauri/                    # Rust backend
+├── src/                     # React + TypeScript frontend (Vite)
+│   ├── components/          # EntryLine, DragTable, ProtectedRoute, ErrorBoundary, ToastContainer, PageTransition
+│   ├── layouts/             # MainLayout (sidebar, header, theme, access-request banner)
+│   ├── pages/               # 21 page components (Welcome, Changelog, + 19 screens)
+│   ├── services/api.ts      # Tauri IPC wrappers
+│   ├── store/               # Zustand: app, auth, theme, toast
+│   ├── types/               # TypeScript types
+│   └── validation/          # Zod schemas
+├── src-tauri/               # Rust backend
 │   └── src/
-│       ├── commands/             # 10 command modules (auth, dashboard, dips, masters, etc.)
-│       ├── models.rs             # Data structures with serde serialization
-│       ├── db.rs                 # SQLite schema (18 tables)
-│       └── lib.rs                # 35 Tauri commands registered
-└── portable-windows/             # Pre-built standalone .exe, .dll files
+│       ├── commands/        # auth, dips, verification, masters, backup, reports, settings, dashboard,
+│       │                    # exceptions, shift_closing, audit, bootstrap
+│       ├── models.rs        # serde data structures
+│       ├── db.rs            # SQLite schema (18 tables)
+│       ├── storage.rs       # portable folders + shared-folder instance lock + access coordination
+│       └── lib.rs           # command registration + access-request watcher
+└── portable-windows/        # Pre-built standalone .exe + .dlls
 ```
 
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| **Desktop Shell** | Tauri 2.x (custom-protocol, protocol-asset) |
-| **Frontend** | React 19, TypeScript, Vite 8, Tailwind CSS 4 |
-| **State** | Zustand 5 |
-| **Forms** | react-hook-form + Zod |
-| **Charts** | Recharts 3 |
-| **Database** | SQLite (rusqlite) |
-| **Backend** | Rust (cross-compiled `x86_64-pc-windows-gnu`) |
-| **Auth** | Username/password with session-based auth |
+| Desktop shell | Tauri 2.x (Rust), WebView2 |
+| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS 4 |
+| State / forms | Zustand 5 · react-hook-form + Zod |
+| Charts | Recharts 3 |
+| Database | SQLite (rusqlite, bundled) |
+| Auth | Username/password (bcrypt), role-based |
 
-## UI/UX Design System
+---
 
-- **Dragon dark theme** with 18 CSS custom properties (`--dr-*` tokens)
-- **Light/dark mode toggle** in header bar, persisted to localStorage
-- **Glass-morphism**: cards, panels, stat cards with backdrop-blur
-- **3D navigation**: perspective transforms on sidebar with active indicator
-- **Page transitions**: View Transitions API with CSS fallback
-- **Toast notifications**: slide-in animations with Web Audio API sound feedback (oscillator tones)
-- **Drag-and-drop**: column reorder on Dip History table (localStorage persistence)
-- **Print support**: `@media print` CSS for Reports page (A4, hides chrome)
-- **Modals**: glass depth layers with multi-layer blur stacking
-- **Loading states**: skeleton spinners on all data pages
-- **Error handling**: toast feedback on all 15+ pages (no silent failures)
-- **Accessibility**: aria-live on toast container
-- **Fonts**: Poppins (UI) + JetBrains Mono (data)
+## Getting started (end user)
 
-## First Run
+1. Extract the **complete portable folder** to a writable location (e.g. a secured IT shared drive).
+2. Run `Tank Farm Dip Control v0.3.1.exe` as a **normal user** (not "Run as administrator").
+3. On first run, create the **Administrator** account (no default/demo password exists).
+4. Configure **Tank / Product / Operator / Tank Status masters** and the approved **tolerances** before operational use.
 
-1. Extract the complete portable folder to its final writable location. A secured PRL shared folder may be used when all authorized users have read/write permission.
-2. Run `Tank Farm Dip Control v0.1.8.exe` as a normal Windows user. Do not use **Run as administrator**. The executable filename carries the application version (e.g. `Tank Farm Dip Control v0.1.8.exe`) so each build can be identified at a glance; rename it only if your deployment policy requires a fixed name.
-3. When no users exist, the application opens the one-time Administrator Setup screen. Create the initial local Administrator; no reusable or demo password is provided.
-4. Sign in and configure Tank, Product, Operator, Tank Status and tolerance master data before operational use. Initial reference roles, shifts, locations, product types and tank statuses are created safely on first start; sample operational data is optional and Administrator-controlled.
+**Requirements:** Windows 10/11 x64 + the Microsoft Edge **WebView2 Runtime** (usually pre-installed; verify it, since this portable build does not download it). No installation, admin rights, server or internet needed at runtime.
 
-All application-created files stay beside the executable (the versioned exe name does not affect storage — the Data/Backup/Logs folders are rooted in the executable's folder):
+### Storage (beside the executable)
 
 | Folder | Contents |
 |---|---|
-| `Data` | Live SQLite database: `tank_farm_dip.db` |
-| `Backup` | Manual and pre-restore safety backups |
-| `Logs` | Rotating application diagnostic logs |
-| `Reports` | CSV report exports |
-| `Config` | Shared-folder instance lock and future configuration files |
-| `Temp` | WebView2 profile/cache and process temporary files |
+| `Data` | Live SQLite database (`tank_farm_dip.db`) |
+| `Backup` | Manual + automatic (`Backup\auto`) snapshots |
+| `Logs` | Diagnostic logs |
+| `Reports` | CSV exports |
+| `Config` | Shared-folder lock + access-request files |
+| `Temp` | WebView2 profile/cache |
 
-On the first v0.1.8 start, if `Data\tank_farm_dip.db` does not exist but the earlier v0.1.7 user-local database exists, the application validates and copies it into portable storage using SQLite's backup API. The source database is retained as a safety copy.
+### Shared-folder operating rule
 
-## Shared Folder Operating Rule
+The same folder can be used by several users **one at a time**. When a second user tries to open it:
 
-The same portable folder and records can be used by Shift Supervisors and Shift In-Charges through shortcuts. Only one running application instance is permitted against that folder at a time. If another user already has it open, the second user receives an **Application in Use** message and must wait until the first user closes it. This safeguard is mandatory because an ordinary SQLite database must not be edited concurrently by separate computers over an SMB/network share.
+- The second user sees an **"In Use"** dialog (who is using it, with Retry/Exit).
+- The current user gets a **toast + banner** — *"[name] is trying to open the application"* — and can dismiss it.
 
-SQLite uses rollback-journal mode with full synchronization instead of WAL mode for this portable/shared-folder deployment. Do not copy only the `.exe`; keep the executable and its generated folders together, and ensure the shared location is included in PRL's normal backup arrangements.
+This is enforced because an SQLite database must **not** be edited concurrently by separate PCs over an
+SMB/network share. Point `Backup\auto` at OneDrive or the corporate backup target for off-site copies.
 
-## How to Run (Development)
+---
+
+## Development
 
 ```bash
 npm install
-npm run dev        # starts Vite dev server with HMR
+npm run dev          # Vite dev server (HMR)
+npm run tauri dev    # full desktop window
 ```
 
-```bash
-npm run dev         # frontend-only development server
-npm run tauri dev   # full Tauri desktop window
-```
-
-## How to Build (Windows .exe)
+## Build (Windows)
 
 ```bash
 npm ci
@@ -135,61 +163,40 @@ npm test
 npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo build --release --manifest-path src-tauri/Cargo.toml
-npx tauri build --no-bundle
 ```
 
-The portable application executable is created at `src-tauri/target/release/app.exe`. The CI workflow renames it to `Tank Farm Dip Control v<version>.exe` (version read from `package.json`) when preparing the delivery folder; do the same when building manually. A built application does not require Node.js, Rust, a server, or an internet connection at runtime.
+The portable executable is produced at `src-tauri/target/release/app.exe`; rename it to
+`Tank Farm Dip Control v<version>.exe` for the delivery folder (the CI workflow does this automatically).
+A built app needs **no** Node/Rust/server/internet at runtime.
 
-## Requirements (End User)
-
-- Windows 10 or Windows 11
-- Microsoft Edge WebView2 Runtime (normally included with supported Windows 10/11 corporate images; verify it during deployment because this portable build does not download it)
-- No installation, no admin rights, no internet required
-
-## Offline Deployment Validation
-
-- Copy the complete portable folder to a standard-user Windows 10/11 test account.
-- Disconnect network access and launch the executable without elevation.
-- Complete first-run Administrator setup against the portable `Data\tank_farm_dip.db` database.
-- Restart the application and verify the same records persist.
-- Exercise backup/restore and confirm the pre-restore safety snapshot appears in the backup list.
-- Corporate application-control policy may still require IT to allow-list the executable and WebView2 loader; this is separate from administrator rights.
-
-## Downloads
-
-Pre-built binaries available at [GitHub Releases](https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases).
+---
 
 ## Database
 
-SQLite database created automatically on first run. Schema includes 18 tables:
+SQLite, created automatically on first run (18 tables): `users`, `roles`, `tanks`, `products`, `operators`,
+`tank_statuses`, `dip_records`, `dip_reviews`, `dip_rechecks`, `dip_corrections`, `shift_closings`,
+`tolerance_settings`, `exceptions`, `audit_logs`, `application_settings`, `shifts`, `locations`.
 
-| Table | Purpose |
-|---|---|
-| `users` | Application users with roles and active status |
-| `roles` | Role definitions |
-| `tanks` | Tank master data (20+ fields) |
-| `products` | Product catalog |
-| `operators` | Operator/employee records |
-| `tank_statuses` | Tank status definitions |
-| `dip_records` | Core dip measurement records |
-| `dip_reviews` | Review history with actions |
-| `dip_rechecks` | Recheck requests and decisions |
-| `dip_corrections` | Correction requests and approvals |
-| `shift_closings` | Shift closure records |
-| `tolerance_settings` | Configurable tolerance limits per tank/product/location |
-| `exceptions` | Tolerance violations and anomalies |
-| `audit_logs` | Complete change tracking |
-| `application_settings` | System configuration key-value store |
-| `shifts`, `locations` | Reference data tables |
+**Tolerances:** three tiers — **Normal** (within range), **Attention** (flagged), **Recheck** (re-measure) —
+with auto-computed differences: gross−auto, gross−radar, auto−radar.
 
-### Tolerance System
+---
 
-Configurable three-tier tolerance limits:
-- **Normal**: within acceptable range
-- **Attention**: flagged for review
-- **Recheck**: requires re-measurement
+## Known limitations (documented, code-pending)
 
-Auto-calculated differences: gross_auto_difference, gross_radar_difference, auto_radar_difference.
+- SQLite `foreign_keys` enforcement is disabled at runtime (schema targets were corrected at the data level).
+- The app uses rollback-journal mode (`journal_mode=delete`); WAL is intentionally avoided for the shared folder.
+- Timestamp storage mixes UTC (`datetime('now')`) and local ISO formats.
+- `Config/application.lock` is not removed on exit (stale file; harmless — overwritten on next start).
+- Role checks are enforced per command, but the "in-use" coordination is best-effort over the share.
+- Binaries are unsigned (Windows SmartScreen may warn); no auto-updater; CSV-only reporting.
+
+---
+
+## Releases & changelog
+
+- Downloads: [GitHub Releases](https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases)
+- Full change history: `CHANGELOG.md` and the in-app **Changelog** screen.
 
 ## License
 

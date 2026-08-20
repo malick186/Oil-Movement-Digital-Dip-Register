@@ -5,6 +5,7 @@ import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageTransition from './components/PageTransition';
 import Login from './pages/Login';
+import Welcome from './pages/Welcome';
 import Dashboard from './pages/Dashboard';
 import NewDip from './pages/NewDip';
 import DipVerification from './pages/DipVerification';
@@ -22,8 +23,10 @@ import Users from './pages/Users';
 import Settings from './pages/Settings';
 import BackupRestore from './pages/BackupRestore';
 import AuditLog from './pages/AuditLog';
+import Changelog from './pages/Changelog';
 
 const pageConfig: Record<string, { component: React.ComponentType; roles: string[] }> = {
+  welcome: { component: Welcome, roles: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'] },
   dashboard: { component: Dashboard, roles: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'] },
   'new-dip': { component: NewDip, roles: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'] },
   'dip-verification': { component: DipVerification, roles: ['Shift In-Charge', 'Administrator'] },
@@ -41,6 +44,7 @@ const pageConfig: Record<string, { component: React.ComponentType; roles: string
   settings: { component: Settings, roles: ['Administrator'] },
   'backup-restore': { component: BackupRestore, roles: ['Administrator'] },
   'audit-log': { component: AuditLog, roles: ['Administrator'] },
+  changelog: { component: Changelog, roles: ['Shift Supervisor', 'Shift In-Charge', 'Administrator'] },
 };
 
 function App() {
