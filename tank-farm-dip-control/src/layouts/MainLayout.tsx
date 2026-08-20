@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import {
   LayoutDashboard,
   PenLine,
@@ -25,6 +26,8 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
 import { useThemeStore } from '../store/themeStore';
+import { useToastStore } from '../store/toastStore';
+import { acknowledgeAccessRequest } from '../services/api';
 import { APP_VERSION } from '../version';
 import ToastContainer from '../components/ToastContainer';
 import type { Page } from '../types';
@@ -111,7 +114,24 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const toggleTheme = useThemeStore((s) => s.toggle);
 
   const [indicatorStyle, setIndicatorStyle] = useState({ top: 0, height: 0 });
+  const [accessRequest, setAccessRequest] = useState<string | null>(null);
+  const accessToastShown = useRef(false);
   const sidebarRef = useRef<HTMLElement>(null);
+
+  // Another PC trying to open the app sends an "access-request" event. Show it once as
+  // a toast and keep a dismissible banner until the user acknowledges it.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen<{ identity: string }>('access-request', (event) => {
+      const identity = event.payload?.identity || 'Another user';
+      if (!accessToastShown.current) {
+        useToastStore.getState().addToast(`${identity} is trying to open the application`, 'info');
+        accessToastShown.current = true;
+      }
+      setAccessRequest(identity);
+    }).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
+  }, []);
 
   const updateIndicator = useCallback(() => {
     if (isCollapsed) {
@@ -284,6 +304,24 @@ export default function MainLayout({ children }: { children: ReactNode }) {
             </div>
           )}
         </header>
+
+        {accessRequest && (
+          <div className="notice-banner warning mx-4 mt-3 flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={15} className="flex-none" />
+              <span>
+                <strong>{accessRequest}</strong> is trying to open the application. Only one user can use it at a time.
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => { setAccessRequest(null); void acknowledgeAccessRequest(); }}
+              className="btn btn-secondary btn-sm flex-none"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         <main className="flex-1 overflow-y-auto content-scroll">
           <div className="p-6 max-w-[1800px] mx-auto">

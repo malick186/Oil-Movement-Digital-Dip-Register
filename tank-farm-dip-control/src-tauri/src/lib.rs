@@ -6,8 +6,8 @@ mod util;
 
 use crate::models::UserSession;
 use std::sync::Mutex;
-use tauri::Manager;
-use tauri_plugin_dialog::DialogExt;
+use tauri::{Emitter, Manager};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -33,16 +33,13 @@ pub fn run() {
                 .build(),
         )
         .setup(move |app| {
-            let instance_lock = match storage::InstanceLock::acquire(&portable_paths) {
+            let instance_lock = match acquire_with_notification(app, &portable_paths) {
                 Ok(lock) => lock,
-                Err(error) => {
-                    app.dialog()
-                        .message(error.to_string())
-                        .title("Tank Farm Dip Control - Shared Folder In Use")
-                        .blocking_show();
-                    return Err(error.into());
-                }
+                Err(error) => return Err(error.into()),
             };
+
+            // Notify the current user (via the frontend) when another PC requests access.
+            spawn_access_request_watcher(app.handle().clone(), portable_paths.clone());
 
             let conn = db::init_db(&portable_paths)?;
             app.manage(portable_paths.clone());
@@ -63,6 +60,7 @@ pub fn run() {
             commands::auth::delete_user,
             commands::auth::list_users,
             commands::auth::toggle_user_active,
+            commands::auth::acknowledge_access_request,
             commands::dashboard::get_dashboard_stats,
             commands::dashboard::get_attention_list,
             commands::dashboard::get_shift_gauging_status,
@@ -118,4 +116,53 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Tries to acquire the shared-folder instance lock. When another user holds it,
+/// notifies that user and asks whether to retry (instead of silently exiting).
+fn acquire_with_notification(
+    app: &tauri::App,
+    paths: &storage::PortablePaths,
+) -> Result<storage::InstanceLock, Box<dyn std::error::Error>> {
+    loop {
+        match storage::InstanceLock::acquire(paths) {
+            Ok(lock) => {
+                storage::write_session_identity(paths);
+                return Ok(lock);
+            }
+            Err(error) => {
+                let identity = storage::read_session_identity(paths)
+                    .unwrap_or_else(|| "another user".to_string());
+                storage::write_access_request(paths);
+                let retry = app
+                    .dialog()
+                    .message(format!(
+                        "The application is currently in use by {identity}.\n\n\
+                         That user has been notified that you are trying to open it.\n\n\
+                         Retry now?"
+                    ))
+                    .title("Tank Farm Dip Control - In Use")
+                    .kind(MessageDialogKind::Warning)
+                    .buttons(MessageDialogButtons::OkCancelCustom(
+                        "Retry".to_string(),
+                        "Exit".to_string(),
+                    ))
+                    .blocking_show();
+                if !retry {
+                    return Err(error.into());
+                }
+                std::thread::sleep(std::time::Duration::from_millis(500));
+            }
+        }
+    }
+}
+
+/// Background watcher: emits an event to the frontend when another PC requests access.
+fn spawn_access_request_watcher(app: tauri::AppHandle, paths: storage::PortablePaths) {
+    std::thread::spawn(move || loop {
+        if let Some(identity) = storage::read_access_request(&paths) {
+            let _ = app.emit("access-request", serde_json::json!({ "identity": identity }));
+        }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+    });
 }

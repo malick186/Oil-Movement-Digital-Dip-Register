@@ -2,6 +2,7 @@ use rusqlite::params;
 use std::sync::Mutex;
 
 use crate::models::{CreateUserRequest, UpdateUserRequest, User, UserSession};
+use crate::storage::{clear_access_request, PortablePaths};
 use crate::util::{audit_log, require_roles};
 
 const ALLOWED_ROLES: &[&str] = &["Shift Supervisor", "Shift In-Charge", "Administrator"];
@@ -99,6 +100,12 @@ pub fn get_current_user(
 ) -> Result<Option<UserSession>, String> {
     let state = current_session.lock().map_err(|e| e.to_string())?;
     Ok(state.clone())
+}
+
+#[tauri::command]
+pub fn acknowledge_access_request(paths: tauri::State<'_, PortablePaths>) -> Result<(), String> {
+    clear_access_request(&paths);
+    Ok(())
 }
 
 #[tauri::command]

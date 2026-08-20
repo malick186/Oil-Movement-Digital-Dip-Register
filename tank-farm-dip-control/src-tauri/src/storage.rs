@@ -114,6 +114,90 @@ impl InstanceLock {
     }
 }
 
+pub const SESSION_FILE: &str = "current_session.txt";
+pub const REQUEST_FILE: &str = "access_request.txt";
+
+fn machine_identity() -> (String, String) {
+    let computer = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "unknown-computer".into());
+    let user = std::env::var("USERNAME").unwrap_or_else(|_| "unknown-user".into());
+    (computer, user)
+}
+
+/// Records who currently holds the folder. Written as a normal (non-exclusively-locked)
+/// file so other PCs can read it while `application.lock` is held open by this instance.
+pub fn write_session_identity(paths: &PortablePaths) {
+    let (computer, user) = machine_identity();
+    let _ = fs::write(
+        paths.config.join(SESSION_FILE),
+        format!(
+            "computer={computer}\nuser={user}\nstarted_at={}\n",
+            chrono::Local::now().to_rfc3339()
+        ),
+    );
+}
+
+/// Human-readable identity of the current holder (e.g. "Shift Supervisor on PC-02").
+pub fn read_session_identity(paths: &PortablePaths) -> Option<String> {
+    let content = fs::read_to_string(paths.config.join(SESSION_FILE)).ok()?;
+    let mut computer = String::new();
+    let mut user = String::new();
+    for line in content.lines() {
+        if let Some(v) = line.strip_prefix("computer=") {
+            computer = v.to_string();
+        } else if let Some(v) = line.strip_prefix("user=") {
+            user = v.to_string();
+        }
+    }
+    if computer.is_empty() {
+        return None;
+    }
+    Some(if user.is_empty() || user == computer {
+        computer
+    } else {
+        format!("{user} on {computer}")
+    })
+}
+
+/// Called by a blocked second instance to notify the current user that someone is
+/// trying to open the application.
+pub fn write_access_request(paths: &PortablePaths) {
+    let (computer, user) = machine_identity();
+    let _ = fs::write(
+        paths.config.join(REQUEST_FILE),
+        format!(
+            "computer={computer}\nuser={user}\ntimestamp={}\n",
+            chrono::Local::now().to_rfc3339()
+        ),
+    );
+}
+
+/// Non-destructive read of a pending access request (the current instance polls this).
+pub fn read_access_request(paths: &PortablePaths) -> Option<String> {
+    let content = fs::read_to_string(paths.config.join(REQUEST_FILE)).ok()?;
+    let mut computer = String::new();
+    let mut user = String::new();
+    for line in content.lines() {
+        if let Some(v) = line.strip_prefix("computer=") {
+            computer = v.to_string();
+        } else if let Some(v) = line.strip_prefix("user=") {
+            user = v.to_string();
+        }
+    }
+    if computer.is_empty() {
+        return None;
+    }
+    Some(if user.is_empty() || user == computer {
+        computer
+    } else {
+        format!("{user} on {computer}")
+    })
+}
+
+/// Clears the pending request after the current user acknowledges the notification.
+pub fn clear_access_request(paths: &PortablePaths) {
+    let _ = fs::remove_file(paths.config.join(REQUEST_FILE));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

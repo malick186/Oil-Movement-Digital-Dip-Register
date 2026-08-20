@@ -104,6 +104,10 @@ export async function deleteUser(userId: number): Promise<void> {
   return invoke('delete_user', { userId });
 }
 
+export async function acknowledgeAccessRequest(): Promise<void> {
+  return invoke('acknowledge_access_request');
+}
+
 // ── Dashboard ──
 
 export async function getDashboardStats(): Promise<DashboardStats> {
