@@ -5,6 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ---
 
+## [0.3.2] - 2026-08-17
+
+### Added
+- **Welcome tab** — app overview, feature tour, brief API MPMS theory (Ch. 3.1A/3.1B/7/9.1/12.2) and the end-to-end workflow.
+- **In-app Changelog tab** — full change history from v0.1.0 to the current build.
+- **Shared-folder coordination** — when another PC tries to open the app, the current user is notified (toast + dismissible banner) and the second user gets an "In Use" dialog (Retry/Exit) identifying the holder.
+
+### Changed
+- **"In use" notification now shows the app-login identity** (username + role on computer) instead of only the OS user.
+- **PRL logo panel made transparent** (removed white background and border on the login/sidebar brand panel).
+- **README rewritten from scratch** and updated for the current release.
+
+### Fixed
+- Welcome and Changelog were hidden by the role-based navigation filter; now visible to all roles.
+
+---
+
 ## [0.3.1] - 2026-08-17
 
 ### Added
@@ -67,6 +84,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 - Initial portable release: authentication + first-run admin bootstrap, Tank/Operator/Product/Shift/Tank-Status masters, dip recording with validation and auto-computed differences, Shift In-Charge review/approval workflow, physical recheck workflow, corrections workflow, exceptions/tolerance engine, shift closing, dashboard, CSV report export, SQLite backup/restore (VACUUM INTO), audit log, settings, portable layout (Data/Config/Logs/Reports/Backup/Temp beside the executable), migration from the user-local database.
 
+[0.3.2]: https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases/tag/v0.3.2
 [0.3.1]: https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases/tag/v0.3.1
 [0.3.0]: https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases/tag/v0.3.0
 [0.2.0]: https://github.com/malick186/Oil-Movement-Digital-Dip-Register/releases/tag/v0.2.0

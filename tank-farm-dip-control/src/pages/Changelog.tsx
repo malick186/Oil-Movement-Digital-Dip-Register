@@ -8,13 +8,13 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
-    version: 'Unreleased (next)',
+    version: 'v0.3.2',
     date: '2026-08-17',
     notes: [
-      'Notify the current user (toast + banner) when another PC tries to open the app from the shared folder.',
-      '"In use" dialog now identifies the current holder by app-login username and role.',
       'Welcome page (overview, features, API MPMS theory, workflow) added to navigation.',
       'In-app Changelog page added.',
+      'Notify the current user (toast + banner) when another PC tries to open the app from the shared folder.',
+      '"In use" dialog now identifies the current holder by app-login username and role.',
       'PRL logo panel made transparent (removed white background and border).',
       'README rewritten from scratch.',
     ],
