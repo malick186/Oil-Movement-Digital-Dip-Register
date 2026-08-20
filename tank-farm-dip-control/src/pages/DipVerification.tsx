@@ -12,6 +12,8 @@ export default function DipVerification() {
   const [selectedRecord, setSelectedRecord] = useState<DipRecordWithRelations | null>(null);
   const [remarks, setRemarks] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [previousReadings, setPreviousReadings] = useState<DipRecordWithRelations[]>([]);
+  const [loadingPrevious, setLoadingPrevious] = useState(false);
 
   const loadRecords = async () => {
     setLoading(true);
@@ -28,10 +30,24 @@ export default function DipVerification() {
 
   useEffect(() => { loadRecords(); }, []);
 
-  const openRecord = (record: DipRecordWithRelations) => {
+  const openRecord = async (record: DipRecordWithRelations) => {
     setSelectedRecord(record);
     setRemarks('');
     setMessage(null);
+    setPreviousReadings([]);
+    setLoadingPrevious(true);
+    try {
+      // Same-tank history for the reviewer: most recent first, excluding the record under review.
+      const rows = await api.listDipRecords({ tank_id: record.tank_id, limit: 10, offset: 0 });
+      const sorted = [...rows]
+        .filter((r) => r.id !== record.id)
+        .sort((a, b) => (b.date + ' ' + b.time).localeCompare(a.date + ' ' + a.time));
+      setPreviousReadings(sorted);
+    } catch {
+      setPreviousReadings([]);
+    } finally {
+      setLoadingPrevious(false);
+    }
   };
 
   const handleReview = async (record: DipRecordWithRelations, action: 'approve' | 'reject' | 'recheck') => {
@@ -180,6 +196,60 @@ export default function DipVerification() {
                   If a submitted reading has an open tolerance exception, approval requires a clear Shift In-Charge remark. The remark also becomes the exception resolution.
                 </div>
               </div>
+            </div>
+
+            <div className="mt-5">
+              <h4 className="text-sm font-semibold text-dragon-text mb-2">
+                Previous History — {selectedRecord.tank_no}
+              </h4>
+              {loadingPrevious ? (
+                <div className="loading-state py-4"><div className="loading-spinner" /></div>
+              ) : previousReadings.length === 0 ? (
+                <p className="text-xs text-dragon-text-muted py-2">No previous recordings for this Tank.</p>
+              ) : (
+                <div className="overflow-auto rounded-lg border border-dragon-border">
+                  <table className="data-table w-full text-xs">
+                    <thead>
+                      <tr>
+                        <th className="px-2 py-1.5">Date</th>
+                        <th className="px-2 py-1.5">Time</th>
+                        <th className="px-2 py-1.5">Gross</th>
+                        <th className="px-2 py-1.5">Auto</th>
+                        <th className="px-2 py-1.5">Radar</th>
+                        <th className="px-2 py-1.5">Water</th>
+                        <th className="px-2 py-1.5">Sludge</th>
+                        <th className="px-2 py-1.5">Temp</th>
+                        <th className="px-2 py-1.5">Density</th>
+                        <th className="px-2 py-1.5">Status</th>
+                        <th className="px-2 py-1.5">Operator</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previousReadings.map((r) => (
+                        <tr key={r.id}>
+                          <td className="px-2 py-1">{r.date}</td>
+                          <td className="px-2 py-1">{r.time}</td>
+                          <td className="px-2 py-1 font-mono">{fmt(r.gross_dip_mm)}</td>
+                          <td className="px-2 py-1 font-mono">{fmt(r.auto_dip_mm)}</td>
+                          <td className="px-2 py-1 font-mono">{fmt(r.radar_dip_mm)}</td>
+                          <td className="px-2 py-1 font-mono">{fmt(r.water_dip_mm)}</td>
+                          <td className="px-2 py-1 font-mono">{fmt(r.sludge_dip_mm)}</td>
+                          <td className="px-2 py-1 font-mono">{r.temperature == null ? '--' : `${r.temperature}${r.temperature_unit ?? ''}`}</td>
+                          <td className="px-2 py-1 font-mono">{r.density?.toFixed(4) ?? '--'}</td>
+                          <td className="px-2 py-1">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                              r.record_status === 'approved' ? 'bg-dragon-success/20 text-dragon-success' :
+                              r.record_status === 'rejected' ? 'bg-dragon-danger/20 text-dragon-danger' :
+                              'bg-dragon-warning/20 text-dragon-warning'
+                            }`}>{r.record_status}</span>
+                          </td>
+                          <td className="px-2 py-1">{r.operator_name || '--'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             <div className="mt-4">
